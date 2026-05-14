@@ -1,14 +1,23 @@
 package main
 
 import (
+	"os"
+
 	tgbot "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/joho/godotenv"
 )
 
 func main() {
-	bot, err := tgbot.NewBotAPI("6972468650:AAFTCAxRiawemXha0KH4fhwgamAI0yxpQDY")
+	err := godotenv.Load()
 	if err != nil {
 		panic(err)
 	}
+	bot, err := tgbot.NewBotAPI(os.Getenv("TELEGRAM_APITOKEN"))
+	if err != nil {
+		panic(err)
+	}
+
+	channelId := -1001733966614
 
 	bot.Debug = true
 
@@ -23,11 +32,10 @@ func main() {
 			continue
 		}
 
-		msg := tgbot.NewMessage(update.Message.Chat.ID, "audio")
+		audioMsg := tgbot.NewAudio(int64(channelId), tgbot.FileID(update.Message.Audio.FileID))
+		audioMsg.Caption = "🗿@BasedSongs"
 
-		msg.ReplyToMessageID = update.Message.MessageID
-
-		if _, err := bot.Send(msg); err != nil {
+		if _, err := bot.Send(audioMsg); err != nil {
 			panic(err)
 		}
 	}
