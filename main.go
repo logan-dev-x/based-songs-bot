@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 	"regexp"
@@ -22,6 +23,7 @@ func scheduler(bot *tgbot.BotAPI) {
 }
 
 func main() {
+	_ = setupDB()
 	err := godotenv.Load()
 	if err != nil {
 		panic(err)
@@ -59,4 +61,23 @@ func main() {
 			panic(err)
 		}
 	}
+}
+
+func setupDB() *sql.DB {
+	db, err := sql.Open("sqlite3", "./data.db")
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+	sqlStmt := `
+	CREATE TABLE IF NOT EXISTS schudulers (
+		fileId text not null primary key,
+		day integer not null,
+		month integer not null
+	);`
+	_, err = db.Exec(sqlStmt)
+	if err != nil {
+		panic(err)
+	}
+	return db
 }
