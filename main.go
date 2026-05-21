@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
 	"os"
 	"regexp"
 	"time"
@@ -23,7 +22,7 @@ func scheduler(bot *tgbot.BotAPI) {
 }
 
 func main() {
-	_ = setupDB()
+	db := setupDB()
 	err := godotenv.Load()
 	if err != nil {
 		panic(err)
@@ -54,12 +53,7 @@ func main() {
 		// audioMsg.Caption = "🗿@BasedSongs"
 		r, _ := regexp.Compile(`([0-9]{2})/([0-9]{2})`)
 		date := r.FindStringSubmatch(update.Message.Caption)
-		content := fmt.Sprintf("dia: %s\nmes: %s", date[1], date[2])
-		msg := tgbot.NewMessage(update.Message.Chat.ID, content)
-
-		if _, err := bot.Send(msg); err != nil {
-			panic(err)
-		}
+		_, err = db.Exec("insert into schudulers(fileId, day, month) values (?, ?, ?)", update.Message.Audio.FileID, date[1], date[2])
 	}
 }
 
@@ -70,10 +64,10 @@ func setupDB() *sql.DB {
 	}
 	defer db.Close()
 	sqlStmt := `
-	CREATE TABLE IF NOT EXISTS schudulers (
-		fileId text not null primary key,
-		day integer not null,
-		month integer not null
+	CREATE TABLE IF NOT EXISTS musics (
+		fileId TEXT NOT NULL PRIMARY KEY,
+		day TEXT NOT NULL,
+		month TEXT NOT NULL
 	);`
 	_, err = db.Exec(sqlStmt)
 	if err != nil {
