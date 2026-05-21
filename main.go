@@ -2,12 +2,16 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"os"
+
+	// "os"
 	"regexp"
 	"time"
 
 	tgbot "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/joho/godotenv"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func scheduler(bot *tgbot.BotAPI) {
@@ -22,14 +26,15 @@ func scheduler(bot *tgbot.BotAPI) {
 }
 
 func main() {
-	db := setupDB()
+	setupDB()
 	err := godotenv.Load()
 	if err != nil {
 		panic(err)
 	}
-	bot, err := tgbot.NewBotAPI(os.Getenv("TELEGRAM_APITOKEN"))
-	if err != nil {
-		panic(err)
+	token := os.Getenv("TELEGRAM_APITOKEN")
+	bot, er := tgbot.NewBotAPI(token)
+	if er != nil {
+		panic(er)
 	}
 
 	// channelId := -1001733966614
@@ -45,6 +50,23 @@ func main() {
 	// go scheduler(bot)
 
 	for update := range updates {
+		if update.Message.IsCommand() {
+			switch update.Message.Command() {
+			case "list":
+				songs := getScheduledSongs()
+				for _, song := range songs {
+					audio := tgbot.NewAudio(update.Message.Chat.ID, tgbot.FileID(song[0]))
+					audio.Caption = fmt.Sprintf("Dia: %s\nMês: %s", song[1], song[2])
+					if _, err := bot.Send(audio); err != nil {
+						panic(err)
+					}
+				}
+			default:
+				if _, err := bot.Send(tgbot.NewMessage(update.Message.Chat.ID, "Comando não reconhecido.")); err != nil {
+					panic(err)
+				}
+			}
+		}
 		if update.Message.Audio == nil {
 			continue
 		}
@@ -53,8 +75,33 @@ func main() {
 		// audioMsg.Caption = "🗿@BasedSongs"
 		r, _ := regexp.Compile(`([0-9]{2})/([0-9]{2})`)
 		date := r.FindStringSubmatch(update.Message.Caption)
-		_, err = db.Exec("insert into schudulers(fileId, day, month) values (?, ?, ?)", update.Message.Audio.FileID, date[1], date[2])
+		db, err := sql.Open("sqlite3", "./data.db")
+		if err != nil {
+			panic(err)
+		}
+		defer db.Close()
+		_, err = db.Exec("INSERT INTO songs (fileId, day, month) VALUES (?, ?, ?)", update.Message.Audio.FileID, date[1], date[2])
+		if err != nil {
+			panic(err)
+		}
 	}
+}
+
+func getScheduledSongs() [][]string {
+	db, err := sql.Open("sqlite3", "./data.db")
+	if err != nil {
+		panic(err)
+	}
+	var songs [][]string
+	rows, err := db.Query("select * from songs")
+	for rows.Next() {
+		var fileId, day, month string
+		if err := rows.Scan(&fileId, &day, &month); err != nil {
+			panic(err)
+		}
+		songs = append(songs, []string{fileId, day, month})
+	}
+	return songs
 }
 
 func setupDB() *sql.DB {
@@ -64,8 +111,8 @@ func setupDB() *sql.DB {
 	}
 	defer db.Close()
 	sqlStmt := `
-	CREATE TABLE IF NOT EXISTS musics (
-		fileId TEXT NOT NULL PRIMARY KEY,
+	CREATE TABLE IF NOT EXISTS songs (
+		fileId TEXT NOT NULL,
 		day TEXT NOT NULL,
 		month TEXT NOT NULL
 	);`
