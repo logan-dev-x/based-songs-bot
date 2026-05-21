@@ -75,17 +75,25 @@ func handleCommand(update tgbot.Update, bot tgbot.BotAPI) {
 	chatId := update.Message.Chat.ID
 	switch update.Message.Command() {
 	case "list":
-		songs := getScheduledSongs()
-		for _, song := range songs {
-			audio := tgbot.NewAudio(chatId, tgbot.FileID(song[0]))
-			audio.Caption = fmt.Sprintf("Dia: %s\nMês: %s", song[1], song[2])
-			if _, err := bot.Send(audio); err != nil {
-				panic(err)
-			}
-		}
+		handleListCmd(chatId, bot)
 	default:
-		msg := tgbot.NewMessage(chatId, "Comando não reconhecido.")
-		if _, err := bot.Send(msg); err != nil {
+		handleDefaultCmd(chatId, bot)
+	}
+}
+
+func handleDefaultCmd(chatId int64, bot tgbot.BotAPI) {
+	msg := tgbot.NewMessage(chatId, "Comando não reconhecido.")
+	if _, err := bot.Send(msg); err != nil {
+		panic(err)
+	}
+}
+
+func handleListCmd(chatId int64, bot tgbot.BotAPI) {
+	songs := getScheduledSongs()
+	for _, song := range songs {
+		audio := tgbot.NewAudio(chatId, tgbot.FileID(song[0]))
+		audio.Caption = fmt.Sprintf("Dia: %s\nMês: %s", song[1], song[2])
+		if _, err := bot.Send(audio); err != nil {
 			panic(err)
 		}
 	}
