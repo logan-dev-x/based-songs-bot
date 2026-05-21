@@ -59,10 +59,7 @@ func main() {
 		// audioMsg.Caption = "🗿@BasedSongs"
 		r, _ := regexp.Compile(`([0-9]{2})/([0-9]{2})`)
 		date := r.FindStringSubmatch(update.Message.Caption)
-		db, err := sql.Open("sqlite3", "./data.db")
-		if err != nil {
-			panic(err)
-		}
+		db := openDB()
 		defer db.Close()
 		_, err = db.Exec("INSERT INTO songs (fileId, day, month) VALUES (?, ?, ?)", update.Message.Audio.FileID, date[1], date[2])
 		if err != nil {
@@ -100,12 +97,15 @@ func handleListCmd(chatId int64, bot tgbot.BotAPI) {
 }
 
 func getScheduledSongs() []Song {
-	db, err := sql.Open("sqlite3", "./data.db")
+	db := openDB()
+	defer db.Close()
+	rows, err := db.Query("select * from songs")
 	if err != nil {
 		panic(err)
 	}
+
 	var songs []Song
-	rows, err := db.Query("select * from songs")
+
 	for rows.Next() {
 		var song Song
 		if err := rows.Scan(&song.FileID, &song.Day, &song.Month); err != nil {
@@ -116,19 +116,25 @@ func getScheduledSongs() []Song {
 	return songs
 }
 
-func setupDB() *sql.DB {
-	db, err := sql.Open("sqlite3", "./data.db")
-	if err != nil {
-		panic(err)
-	}
+func setupDB() {
+	db := openDB()
 	defer db.Close()
+
 	sqlStmt := `
 	CREATE TABLE IF NOT EXISTS songs (
 		fileId TEXT NOT NULL,
 		day TEXT NOT NULL,
 		month TEXT NOT NULL
 	);`
-	_, err = db.Exec(sqlStmt)
+
+	_, err := db.Exec(sqlStmt)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func openDB() *sql.DB {
+	db, err := sql.Open("sqlite3", "./data.db")
 	if err != nil {
 		panic(err)
 	}
