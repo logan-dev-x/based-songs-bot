@@ -55,21 +55,30 @@ func main() {
 			continue
 		}
 
-		// audioMsg := tgbot.NewAudio(int64(channelId), tgbot.FileID(update.Message.Audio.FileID))
-		// audioMsg.Caption = "🗿@BasedSongs"
-		r, _ := regexp.Compile(`([0-9]{2})/([0-9]{2})`)
-		date := r.FindStringSubmatch(update.Message.Caption)
 		db := openDB()
 		defer db.Close()
-		_, err = db.Exec("INSERT INTO songs (fileId, day, month) VALUES (?, ?, ?)", update.Message.Audio.FileID, date[1], date[2])
+
+		// audioMsg := tgbot.NewAudio(int64(channelId), tgbot.FileID(update.Message.Audio.FileID))
+		// audioMsg.Caption = "🗿@BasedSongs"
+
+		day, month := getScheduleDate(update.Message.Caption)
+
+		_, err = db.Exec("INSERT INTO songs (fileId, day, month) VALUES (?, ?, ?)", update.Message.Audio.FileID, day, month)
 		if err != nil {
 			panic(err)
 		}
 	}
 }
 
+func getScheduleDate(caption string) (string, string) {
+	r, _ := regexp.Compile(`([0-9]{2})/([0-9]{2})`)
+	date := r.FindStringSubmatch(caption)
+	return date[1], date[2]
+}
+
 func handleCommand(update tgbot.Update, bot tgbot.BotAPI) {
 	chatId := update.Message.Chat.ID
+
 	switch update.Message.Command() {
 	case "list":
 		handleListCmd(chatId, bot)
@@ -86,10 +95,10 @@ func handleDefaultCmd(chatId int64, bot tgbot.BotAPI) {
 }
 
 func handleListCmd(chatId int64, bot tgbot.BotAPI) {
-	songs := getScheduledSongs()
-	for _, song := range songs {
+	for _, song := range getScheduledSongs() {
 		audio := tgbot.NewAudio(chatId, tgbot.FileID(song.FileID))
 		audio.Caption = fmt.Sprintf("Dia: %s\nMês: %s", song.Day, song.Month)
+
 		if _, err := bot.Send(audio); err != nil {
 			panic(err)
 		}
@@ -99,7 +108,8 @@ func handleListCmd(chatId int64, bot tgbot.BotAPI) {
 func getScheduledSongs() []Song {
 	db := openDB()
 	defer db.Close()
-	rows, err := db.Query("select * from songs")
+
+	rows, err := db.Query("SELECT fileId, day, month FROM SONGS")
 	if err != nil {
 		panic(err)
 	}
@@ -113,6 +123,7 @@ func getScheduledSongs() []Song {
 		}
 		songs = append(songs, song)
 	}
+
 	return songs
 }
 
