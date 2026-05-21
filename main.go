@@ -4,8 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
-
-	// "os"
 	"regexp"
 	"time"
 
@@ -51,21 +49,7 @@ func main() {
 
 	for update := range updates {
 		if update.Message.IsCommand() {
-			switch update.Message.Command() {
-			case "list":
-				songs := getScheduledSongs()
-				for _, song := range songs {
-					audio := tgbot.NewAudio(update.Message.Chat.ID, tgbot.FileID(song[0]))
-					audio.Caption = fmt.Sprintf("Dia: %s\nMês: %s", song[1], song[2])
-					if _, err := bot.Send(audio); err != nil {
-						panic(err)
-					}
-				}
-			default:
-				if _, err := bot.Send(tgbot.NewMessage(update.Message.Chat.ID, "Comando não reconhecido.")); err != nil {
-					panic(err)
-				}
-			}
+			handleCommand(update, *bot)
 		}
 		if update.Message.Audio == nil {
 			continue
@@ -82,6 +66,26 @@ func main() {
 		defer db.Close()
 		_, err = db.Exec("INSERT INTO songs (fileId, day, month) VALUES (?, ?, ?)", update.Message.Audio.FileID, date[1], date[2])
 		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func handleCommand(update tgbot.Update, bot tgbot.BotAPI) {
+	chatId := update.Message.Chat.ID
+	switch update.Message.Command() {
+	case "list":
+		songs := getScheduledSongs()
+		for _, song := range songs {
+			audio := tgbot.NewAudio(chatId, tgbot.FileID(song[0]))
+			audio.Caption = fmt.Sprintf("Dia: %s\nMês: %s", song[1], song[2])
+			if _, err := bot.Send(audio); err != nil {
+				panic(err)
+			}
+		}
+	default:
+		msg := tgbot.NewMessage(chatId, "Comando não reconhecido.")
+		if _, err := bot.Send(msg); err != nil {
 			panic(err)
 		}
 	}
