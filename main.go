@@ -91,27 +91,27 @@ func handleDefaultCmd(chatId int64, bot tgbot.BotAPI) {
 func handleListCmd(chatId int64, bot tgbot.BotAPI) {
 	songs := getScheduledSongs()
 	for _, song := range songs {
-		audio := tgbot.NewAudio(chatId, tgbot.FileID(song[0]))
-		audio.Caption = fmt.Sprintf("Dia: %s\nMês: %s", song[1], song[2])
+		audio := tgbot.NewAudio(chatId, tgbot.FileID(song.FileID))
+		audio.Caption = fmt.Sprintf("Dia: %s\nMês: %s", song.Day, song.Month)
 		if _, err := bot.Send(audio); err != nil {
 			panic(err)
 		}
 	}
 }
 
-func getScheduledSongs() [][]string {
+func getScheduledSongs() []Song {
 	db, err := sql.Open("sqlite3", "./data.db")
 	if err != nil {
 		panic(err)
 	}
-	var songs [][]string
+	var songs []Song
 	rows, err := db.Query("select * from songs")
 	for rows.Next() {
-		var fileId, day, month string
-		if err := rows.Scan(&fileId, &day, &month); err != nil {
+		var song Song
+		if err := rows.Scan(&song.FileID, &song.Day, &song.Month); err != nil {
 			panic(err)
 		}
-		songs = append(songs, []string{fileId, day, month})
+		songs = append(songs, song)
 	}
 	return songs
 }
