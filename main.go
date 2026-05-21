@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"os"
 	"regexp"
@@ -103,51 +102,4 @@ func handleListCmd(chatId int64, bot tgbot.BotAPI) {
 			panic(err)
 		}
 	}
-}
-
-func getScheduledSongs() []Song {
-	db := openDB()
-	defer db.Close()
-
-	rows, err := db.Query("SELECT fileId, day, month FROM SONGS")
-	if err != nil {
-		panic(err)
-	}
-
-	var songs []Song
-
-	for rows.Next() {
-		var song Song
-		if err := rows.Scan(&song.FileID, &song.Day, &song.Month); err != nil {
-			panic(err)
-		}
-		songs = append(songs, song)
-	}
-
-	return songs
-}
-
-func setupDB() {
-	db := openDB()
-	defer db.Close()
-
-	sqlStmt := `
-	CREATE TABLE IF NOT EXISTS songs (
-		fileId TEXT NOT NULL,
-		day TEXT NOT NULL,
-		month TEXT NOT NULL
-	);`
-
-	_, err := db.Exec(sqlStmt)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func openDB() *sql.DB {
-	db, err := sql.Open("sqlite3", "./data.db")
-	if err != nil {
-		panic(err)
-	}
-	return db
 }
