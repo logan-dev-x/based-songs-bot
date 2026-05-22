@@ -11,6 +11,33 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+func main() {
+	setupDB()
+
+	err := godotenv.Load()
+	if err != nil {
+		panic(err)
+	}
+
+	token := os.Getenv("TELEGRAM_APITOKEN")
+	bot, err := tgbot.NewBotAPI(token)
+	if err != nil {
+		panic(err)
+	}
+
+	// channelId := -1001733966614
+
+	bot.Debug = true
+
+	updateConfig := tgbot.NewUpdate(0)
+	updateConfig.Timeout = 30
+
+	updates := bot.GetUpdatesChan(updateConfig)
+
+	// go scheduler(bot)
+	pooling(updates, bot)
+}
+
 func scheduler(bot *tgbot.BotAPI) {
 	for {
 		println("sewrching for schedules")
@@ -22,33 +49,10 @@ func scheduler(bot *tgbot.BotAPI) {
 	}
 }
 
-func main() {
-	setupDB()
-	err := godotenv.Load()
-	if err != nil {
-		panic(err)
-	}
-	token := os.Getenv("TELEGRAM_APITOKEN")
-	bot, er := tgbot.NewBotAPI(token)
-	if er != nil {
-		panic(er)
-	}
-
-	// channelId := -1001733966614
-
-	bot.Debug = true
-
-	updateConfig := tgbot.NewUpdate(0)
-
-	updateConfig.Timeout = 30
-
-	updates := bot.GetUpdatesChan(updateConfig)
-
-	// go scheduler(bot)
-
+func pooling(updates tgbot.UpdatesChannel, bot *tgbot.BotAPI) {
 	for update := range updates {
 		if update.Message.IsCommand() {
-			handleCommand(update, *bot)
+			handleCommand(update, bot)
 		}
 		if update.Message.Audio == nil {
 			continue
@@ -62,7 +66,7 @@ func main() {
 
 		day, month := getScheduleDate(update.Message.Caption)
 
-		_, err = db.Exec("INSERT INTO songs (fileId, day, month) VALUES (?, ?, ?)", update.Message.Audio.FileID, day, month)
+		_, err := db.Exec("INSERT INTO songs (fileId, day, month) VALUES (?, ?, ?)", update.Message.Audio.FileID, day, month)
 		if err != nil {
 			panic(err)
 		}
@@ -75,7 +79,7 @@ func getScheduleDate(caption string) (string, string) {
 	return date[1], date[2]
 }
 
-func handleCommand(update tgbot.Update, bot tgbot.BotAPI) {
+func handleCommand(update tgbot.Update, bot *tgbot.BotAPI) {
 	chatId := update.Message.Chat.ID
 
 	switch update.Message.Command() {
@@ -86,14 +90,14 @@ func handleCommand(update tgbot.Update, bot tgbot.BotAPI) {
 	}
 }
 
-func handleDefaultCmd(chatId int64, bot tgbot.BotAPI) {
+func handleDefaultCmd(chatId int64, bot *tgbot.BotAPI) {
 	msg := tgbot.NewMessage(chatId, "Comando não reconhecido.")
 	if _, err := bot.Send(msg); err != nil {
 		panic(err)
 	}
 }
 
-func handleListCmd(chatId int64, bot tgbot.BotAPI) {
+func handleListCmd(chatId int64, bot *tgbot.BotAPI) {
 	for _, song := range getScheduledSongs() {
 		audio := tgbot.NewAudio(chatId, tgbot.FileID(song.FileID))
 		audio.Caption = fmt.Sprintf("Dia: %s\nMês: %s", song.Day, song.Month)
