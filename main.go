@@ -32,7 +32,7 @@ func main() {
 
 	updates := bot.GetUpdatesChan(updateConfig)
 
-	// go scheduler(bot)
+	go scheduler(bot)
 	pooling(updates, bot)
 }
 
@@ -46,10 +46,16 @@ func setupLogger() {
 
 func scheduler(bot *tgbot.BotAPI) {
 	for {
-		println("sewrching for schedules")
+		txt := ""
+		if !thereAreSchedules() {
+			txt = "sem agendamentos"
+		} else {
+			txt = "Há agendamentos"
+		}
 
-		msg := tgbot.NewMessage(1071520377, "hi")
-		bot.Send(msg)
+		msg := tgbot.NewMessage(1071520377, txt)
+		_, err := bot.Send(msg)
+		check(err)
 
 		time.Sleep(2 * time.Second)
 	}

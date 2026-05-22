@@ -43,3 +43,14 @@ func getScheduledSongs() []Song {
 
 	return songs
 }
+
+func thereAreSchedules() bool {
+	db := openDB()
+	defer db.Close()
+
+	var count int
+	err := db.QueryRow("SELECT COUNT(*) FROM songs").Scan(&count)
+	checkFatal(err)
+
+	return count > 0
+}
