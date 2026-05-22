@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"regexp"
 	"time"
@@ -12,17 +13,18 @@ import (
 )
 
 func main() {
+	setupLogger()
 	setupDB()
 
 	err := godotenv.Load()
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	token := os.Getenv("TELEGRAM_APITOKEN")
 	bot, err := tgbot.NewBotAPI(token)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	// channelId := -1001733966614
@@ -36,6 +38,15 @@ func main() {
 
 	// go scheduler(bot)
 	pooling(updates, bot)
+}
+
+func setupLogger() {
+	file, err := os.OpenFile("log.txt", os.O_CREATE|os.O_WRONLY, 0o664)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.SetOutput(file)
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 }
 
 func scheduler(bot *tgbot.BotAPI) {
@@ -68,7 +79,7 @@ func pooling(updates tgbot.UpdatesChannel, bot *tgbot.BotAPI) {
 
 		_, err := db.Exec("INSERT INTO songs (fileId, day, month) VALUES (?, ?, ?)", update.Message.Audio.FileID, day, month)
 		if err != nil {
-			panic(err)
+			log.Println(err)
 		}
 	}
 }
@@ -93,7 +104,7 @@ func handleCommand(update tgbot.Update, bot *tgbot.BotAPI) {
 func handleDefaultCmd(chatId int64, bot *tgbot.BotAPI) {
 	msg := tgbot.NewMessage(chatId, "Comando não reconhecido.")
 	if _, err := bot.Send(msg); err != nil {
-		panic(err)
+		log.Println(err)
 	}
 }
 
@@ -103,7 +114,7 @@ func handleListCmd(chatId int64, bot *tgbot.BotAPI) {
 		audio.Caption = fmt.Sprintf("Dia: %s\nMês: %s", song.Day, song.Month)
 
 		if _, err := bot.Send(audio); err != nil {
-			panic(err)
+			log.Println(err)
 		}
 	}
 }

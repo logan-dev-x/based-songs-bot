@@ -1,11 +1,14 @@
 package main
 
-import "database/sql"
+import (
+	"database/sql"
+	"log"
+)
 
 func openDB() *sql.DB {
 	db, err := sql.Open("sqlite3", "./data.db")
 	if err != nil {
-		panic(err)
+		log.Println(err)
 	}
 	return db
 }
@@ -23,7 +26,7 @@ func setupDB() {
 
 	_, err := db.Exec(sqlStmt)
 	if err != nil {
-		panic(err)
+		log.Println(err)
 	}
 }
 
@@ -33,7 +36,7 @@ func getScheduledSongs() []Song {
 
 	rows, err := db.Query("SELECT fileId, day, month FROM SONGS")
 	if err != nil {
-		panic(err)
+		log.Println(err)
 	}
 
 	var songs []Song
@@ -41,7 +44,7 @@ func getScheduledSongs() []Song {
 	for rows.Next() {
 		var song Song
 		if err := rows.Scan(&song.FileID, &song.Day, &song.Month); err != nil {
-			panic(err)
+			log.Println(err)
 		}
 		songs = append(songs, song)
 	}
