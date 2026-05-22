@@ -2,14 +2,11 @@ package main
 
 import (
 	"database/sql"
-	"log"
 )
 
 func openDB() *sql.DB {
 	db, err := sql.Open("sqlite3", "./data.db")
-	if err != nil {
-		log.Println(err)
-	}
+	check(err)
 	return db
 }
 
@@ -25,9 +22,7 @@ func setupDB() {
 	);`
 
 	_, err := db.Exec(sqlStmt)
-	if err != nil {
-		log.Println(err)
-	}
+	checkFatal(err)
 }
 
 func getScheduledSongs() []Song {
@@ -35,17 +30,14 @@ func getScheduledSongs() []Song {
 	defer db.Close()
 
 	rows, err := db.Query("SELECT fileId, day, month FROM SONGS")
-	if err != nil {
-		log.Println(err)
-	}
+	check(err)
 
 	var songs []Song
 
 	for rows.Next() {
 		var song Song
-		if err := rows.Scan(&song.FileID, &song.Day, &song.Month); err != nil {
-			log.Println(err)
-		}
+		err := rows.Scan(&song.FileID, &song.Day, &song.Month)
+		check(err)
 		songs = append(songs, song)
 	}
 
