@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"strconv"
 	"time"
 
 	tgbot "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -46,18 +47,28 @@ func setupLogger() {
 
 func scheduler(bot *tgbot.BotAPI) {
 	for {
-		txt := ""
 		if !thereAreSchedules() {
-			txt = "sem agendamentos"
-		} else {
-			txt = "Há agendamentos"
+			fmt.Println("not shecules")
+			time.Sleep(5 * time.Second)
+			continue
 		}
 
-		msg := tgbot.NewMessage(1071520377, txt)
-		_, err := bot.Send(msg)
-		check(err)
+		fmt.Println("there're shecules")
 
-		time.Sleep(2 * time.Second)
+		loc, _ := time.LoadLocation("America/Sao_Paulo")
+		songs := getScheduledSongs()
+
+		now := time.Now().In(loc)
+		for _, song := range songs {
+			if day, _ := strconv.Atoi(song.Day); day == now.Day() && now.Hour() >= 22 {
+				audio := tgbot.NewAudio(1071520377, tgbot.FileID(song.FileID))
+				audio.Caption = "🗿@BasedSongs"
+				_, err := bot.Send(audio)
+				check(err)
+			}
+		}
+
+		time.Sleep(5 * time.Second)
 	}
 }
 
@@ -72,9 +83,6 @@ func pooling(updates tgbot.UpdatesChannel, bot *tgbot.BotAPI) {
 
 		db := openDB()
 		defer db.Close()
-
-		// audioMsg := tgbot.NewAudio(int64(channelId), tgbot.FileID(update.Message.Audio.FileID))
-		// audioMsg.Caption = "🗿@BasedSongs"
 
 		day, month := getScheduleDate(update.Message.Caption)
 

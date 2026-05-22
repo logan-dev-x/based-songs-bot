@@ -29,7 +29,7 @@ func getScheduledSongs() []Song {
 	db := openDB()
 	defer db.Close()
 
-	rows, err := db.Query("SELECT fileId, day, month FROM SONGS")
+	rows, err := db.Query("SELECT fileId, day, month FROM songs")
 	check(err)
 
 	var songs []Song
