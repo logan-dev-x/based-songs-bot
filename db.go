@@ -54,3 +54,11 @@ func thereAreSchedules() bool {
 
 	return count > 0
 }
+
+func deleteSong(fileID string) {
+	db := openDB()
+	defer db.Close()
+
+	_, err := db.Exec("DELETE FROM songs WHERE fileId = ?", fileID)
+	check(err)
+}

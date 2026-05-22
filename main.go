@@ -65,6 +65,7 @@ func scheduler(bot *tgbot.BotAPI) {
 				audio.Caption = "🗿@BasedSongs"
 				_, err := bot.Send(audio)
 				check(err)
+				deleteSong(song.FileID)
 			}
 		}
 
