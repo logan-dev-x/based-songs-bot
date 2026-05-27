@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -75,27 +76,34 @@ func scheduler(bot *tgbot.BotAPI) {
 
 func pooling(updates tgbot.UpdatesChannel, bot *tgbot.BotAPI) {
 	for update := range updates {
-		if update.Message.IsCommand() {
+		if update.Message != nil && update.Message.IsCommand() {
 			handleCommand(update, bot)
 		}
-		if update.Message.Audio == nil {
+		if update.Message == nil || update.Message.Audio == nil {
 			continue
 		}
 
 		db := openDB()
 		defer db.Close()
 
-		day, month := getScheduleDate(update.Message.Caption)
+		day, month, err := getScheduleDate(update.Message.Caption)
+		if err != nil {
+			bot.Send(tgbot.NewMessage(update.Message.Chat.ID, err.Error()))
+			continue
+		}
 
-		_, err := db.Exec("INSERT INTO songs (fileId, day, month) VALUES (?, ?, ?)", update.Message.Audio.FileID, day, month)
+		_, err = db.Exec("INSERT INTO songs (fileId, day, month) VALUES (?, ?, ?)", update.Message.Audio.FileID, day, month)
 		check(err)
 	}
 }
 
-func getScheduleDate(caption string) (string, string) {
-	r, _ := regexp.Compile(`([0-9]{2})/([0-9]{2})`)
-	date := r.FindStringSubmatch(caption)
-	return date[1], date[2]
+func getScheduleDate(caption string) (string, string, error) {
+	r, _ := regexp.Compile(`(\d{2})/(\d{2})`)
+	matches := r.FindStringSubmatch(caption)
+	if len(matches) < 3 {
+		return "", "", errors.New("Nao foi possivel reconhecer")
+	}
+	return matches[1], matches[2], nil
 }
 
 func handleCommand(update tgbot.Update, bot *tgbot.BotAPI) {
@@ -104,9 +112,38 @@ func handleCommand(update tgbot.Update, bot *tgbot.BotAPI) {
 	switch update.Message.Command() {
 	case "list":
 		handleListCmd(chatId, bot)
+	case "addConfig":
+		handleAddConfigCmd(update.Message.Text, chatId, bot)
 	default:
 		handleDefaultCmd(chatId, bot)
 	}
+}
+
+func handleAddConfigCmd(text string, chatId int64, bot *tgbot.BotAPI) {
+	var msg string
+	key, value, err := getConfigPair(text)
+	if err != nil {
+		msg = err.Error()
+	} else {
+		err = addConfig(key, value)
+		if err != nil {
+			msg = err.Error()
+		} else {
+			msg = fmt.Sprintf("key: %s\nvalue: %s", key, value)
+		}
+	}
+
+	_, err = bot.Send(tgbot.NewMessage(chatId, msg))
+	check(err)
+}
+
+func getConfigPair(text string) (string, string, error) {
+	r, _ := regexp.Compile(`\w (\w+) (\w+)`)
+	data := r.FindStringSubmatch(text)
+	if len(data) < 3 {
+		return "", "", errors.New("configuracão não recohecida")
+	}
+	return data[1], data[2], nil
 }
 
 func handleDefaultCmd(chatId int64, bot *tgbot.BotAPI) {

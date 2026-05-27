@@ -14,14 +14,22 @@ func setupDB() {
 	db := openDB()
 	defer db.Close()
 
-	sqlStmt := `
+	confgiSql := `
+	CREATE TABLE if NOT EXISTS config (
+		key TEXT NOT NULL,
+		value TEXT NOT NULL
+	);`
+	_, err := db.Exec(confgiSql)
+	checkFatal(err)
+
+	songsSql := `
 	CREATE TABLE IF NOT EXISTS songs (
 		fileId TEXT NOT NULL,
 		day TEXT NOT NULL,
 		month TEXT NOT NULL
 	);`
 
-	_, err := db.Exec(sqlStmt)
+	_, err = db.Exec(songsSql)
 	checkFatal(err)
 }
 
@@ -61,4 +69,12 @@ func deleteSong(fileID string) {
 
 	_, err := db.Exec("DELETE FROM songs WHERE fileId = ?", fileID)
 	check(err)
+}
+
+func addConfig(key, value string) error {
+	db := openDB()
+	defer db.Close()
+
+	_, err := db.Exec("INSERT INTO config (key, value) VALUES (?,?);", key, value)
+	return err
 }
