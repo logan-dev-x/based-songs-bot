@@ -1,163 +1,33 @@
 package main
 
 import (
-	"errors"
-	"fmt"
 	"log"
 	"os"
-	"regexp"
-	"strconv"
-	"time"
 
-	tgbot "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/joho/godotenv"
+	"based-bot/bot"
+	"based-bot/config"
+	"based-bot/database"
+
 	_ "github.com/mattn/go-sqlite3"
 )
 
 func main() {
 	setupLogger()
-	setupDB()
 
-	err := godotenv.Load()
-	checkFatal(err)
+	cfg := config.Load()
 
-	token := os.Getenv("TELEGRAM_APITOKEN")
-	bot, err := tgbot.NewBotAPI(token)
-	checkFatal(err)
+	db := database.InitDB()
+	defer db.Close()
 
-	// channelId := -1001733966614
-
-	bot.Debug = true
-
-	updateConfig := tgbot.NewUpdate(0)
-	updateConfig.Timeout = 30
-
-	updates := bot.GetUpdatesChan(updateConfig)
-
-	go scheduler(bot)
-	pooling(updates, bot)
+	log.Println("Iniciando o bot...")
+	bot.Start(cfg, db)
 }
 
 func setupLogger() {
 	file, err := os.OpenFile("log.txt", os.O_CREATE|os.O_WRONLY, 0o664)
-	checkFatal(err)
-
+	if err != nil {
+		log.Fatalf("logger error: %v", err)
+	}
 	log.SetOutput(file)
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-}
-
-func scheduler(bot *tgbot.BotAPI) {
-	for {
-		if !thereAreSchedules() {
-			fmt.Println("not shecules")
-			time.Sleep(5 * time.Second)
-			continue
-		}
-
-		fmt.Println("there're shecules")
-
-		loc, _ := time.LoadLocation("America/Sao_Paulo")
-		songs := getScheduledSongs()
-
-		now := time.Now().In(loc)
-		for _, song := range songs {
-			if day, _ := strconv.Atoi(song.Day); day == now.Day() && now.Hour() >= 22 {
-				audio := tgbot.NewAudio(1071520377, tgbot.FileID(song.FileID))
-				audio.Caption = "🗿@BasedSongs"
-				_, err := bot.Send(audio)
-				check(err)
-				deleteSong(song.FileID)
-			}
-		}
-
-		time.Sleep(5 * time.Second)
-	}
-}
-
-func pooling(updates tgbot.UpdatesChannel, bot *tgbot.BotAPI) {
-	for update := range updates {
-		if update.Message != nil && update.Message.IsCommand() {
-			handleCommand(update, bot)
-		}
-		if update.Message == nil || update.Message.Audio == nil {
-			continue
-		}
-
-		db := openDB()
-		defer db.Close()
-
-		day, month, err := getScheduleDate(update.Message.Caption)
-		if err != nil {
-			bot.Send(tgbot.NewMessage(update.Message.Chat.ID, err.Error()))
-			continue
-		}
-
-		_, err = db.Exec("INSERT INTO songs (fileId, day, month) VALUES (?, ?, ?)", update.Message.Audio.FileID, day, month)
-		check(err)
-	}
-}
-
-func getScheduleDate(caption string) (string, string, error) {
-	r, _ := regexp.Compile(`(\d{2})/(\d{2})`)
-	matches := r.FindStringSubmatch(caption)
-	if len(matches) < 3 {
-		return "", "", errors.New("Nao foi possivel reconhecer")
-	}
-	return matches[1], matches[2], nil
-}
-
-func handleCommand(update tgbot.Update, bot *tgbot.BotAPI) {
-	chatId := update.Message.Chat.ID
-
-	switch update.Message.Command() {
-	case "list":
-		handleListCmd(chatId, bot)
-	case "addConfig":
-		handleAddConfigCmd(update.Message.Text, chatId, bot)
-	default:
-		handleDefaultCmd(chatId, bot)
-	}
-}
-
-func handleAddConfigCmd(text string, chatId int64, bot *tgbot.BotAPI) {
-	var msg string
-	key, value, err := getConfigPair(text)
-	if err != nil {
-		msg = err.Error()
-	} else {
-		err = addConfig(key, value)
-		if err != nil {
-			msg = err.Error()
-		} else {
-			msg = fmt.Sprintf("key: %s\nvalue: %s", key, value)
-		}
-	}
-
-	_, err = bot.Send(tgbot.NewMessage(chatId, msg))
-	check(err)
-}
-
-func getConfigPair(text string) (string, string, error) {
-	r, _ := regexp.Compile(`\w (\w+) (\w+)`)
-	data := r.FindStringSubmatch(text)
-	if len(data) < 3 {
-		return "", "", errors.New("configuracão não recohecida")
-	}
-	return data[1], data[2], nil
-}
-
-func handleDefaultCmd(chatId int64, bot *tgbot.BotAPI) {
-	msg := tgbot.NewMessage(chatId, "Comando não reconhecido.")
-	_, err := bot.Send(msg)
-	check(err)
-}
-
-func handleListCmd(chatId int64, bot *tgbot.BotAPI) {
-	for _, song := range getScheduledSongs() {
-		audio := tgbot.NewAudio(chatId, tgbot.FileID(song.FileID))
-		audio.Caption = fmt.Sprintf("Dia: %s\nMês: %s", song.Day, song.Month)
-
-		_, err := bot.Send(audio)
-		check(err)
-	}
 }
