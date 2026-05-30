@@ -25,6 +25,10 @@ func setupTestDB(t *testing.T) *sql.DB {
 	return db
 }
 
+func insertMock(db *sql.DB, fileID string, day int, month int) {
+	db.Exec("INSERT INTO songs (fileID, day, month) VALUES (?,?,?);", fileID, day, month)
+}
+
 func TestSave(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
