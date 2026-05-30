@@ -46,7 +46,6 @@ func TestSave(t *testing.T) {
 }
 
 func TestRepository_GetByDate(t *testing.T) {
-	query := "INSERT INTO songs (fileID, day, month) VALUES (?, ?, ?)"
 	tests := []struct {
 		name string // description of this test case
 		// Named input parameters for receiver constructor.
@@ -60,7 +59,7 @@ func TestRepository_GetByDate(t *testing.T) {
 		{
 			"existend Song",
 			func(db *sql.DB) {
-				db.Exec(query, "mock_1234", 1, 3)
+				insertMock(t, db, "mock_1234", 1, 3)
 			},
 			1,
 			3,
@@ -86,8 +85,8 @@ func TestRepository_GetByDate(t *testing.T) {
 		{
 			"muiltiply Songs",
 			func(db *sql.DB) {
-				db.Exec(query, "mock_1234", 1, 3)
-				db.Exec(query, "mock_5432", 1, 3)
+				insertMock(t, db, "mock_1234", 1, 3)
+				insertMock(t, db, "mock_5432", 1, 3)
 			},
 			1,
 			3,
