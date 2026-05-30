@@ -151,3 +151,84 @@ func TestRepository_GetByDate(t *testing.T) {
 		})
 	}
 }
+
+func TestRepository_Delete(t *testing.T) {
+	tests := []struct {
+		name string // description of this test case
+		// Named input parameters for receiver constructor.
+		setup func(db *sql.DB)
+		// Named input parameters for target function.
+		fileID    string
+		wantErr   bool
+		wantCount int
+	}{
+		{
+			"delete existing song",
+			func(db *sql.DB) {
+				insertMock(db, "mock_file_123", 1, 3)
+			},
+			"mock_file_123",
+			false,
+			0,
+		},
+		{
+			"delete non-existing song",
+			func(db *sql.DB) {
+			},
+			"mock_file_123",
+			false,
+			0,
+		},
+		{
+			"delete only target song",
+			func(db *sql.DB) {
+				insertMock(db, "mock_file_1", 1, 3)
+				insertMock(db, "mock_file_2", 2, 3)
+				insertMock(db, "mock_file_3", 2, 3)
+			},
+			"mock_file_3",
+			false,
+			2,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := setupTestDB(t)
+			tt.setup(db)
+			r := NewRepository(db)
+
+			gotErr := r.Delete(tt.fileID)
+			if gotErr != nil {
+				if !tt.wantErr {
+					t.Errorf("Delete() failed: %v", gotErr)
+				}
+				return
+			}
+			if tt.wantErr {
+				t.Fatal("Delete() succeeded unexpectedly")
+			}
+
+			var count int
+
+			err := r.db.QueryRow("SELECT COUNT(*) FROM songs WHERE fileID = ?", tt.fileID).Scan(&count)
+			if err != nil {
+				t.Fatalf("count target song: %v", err)
+			}
+			if count != 0 {
+				t.Fatal("target song still exists")
+			}
+
+			err = r.db.QueryRow("SELECT COUNT(*) FROM songs;").Scan(&count)
+			if err != nil {
+				t.Fatalf("count target song: %v", err)
+			}
+			if count != tt.wantCount {
+				t.Errorf(
+					"expect %d reamining, got %d",
+					tt.wantCount,
+					count,
+				)
+			}
+		})
+	}
+}
