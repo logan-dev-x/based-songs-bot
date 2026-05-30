@@ -8,27 +8,6 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func setupTestDB(t *testing.T) *sql.DB {
-	db, err := sql.Open("sqlite3", "file::memory:")
-	if err != nil {
-		t.Fatalf("Cant open memory DB: %v", err)
-	}
-	migration := `
-	CREATE TABLE IF NOT EXISTS songs (
-		fileId TEXT NOT NULL,
-		day INTEGER NOT NULL,
-		month INTEGER NOT NULL
-	);`
-	if _, err := db.Exec(migration); err != nil {
-		t.Fatalf("Error creating table: %v", err)
-	}
-	return db
-}
-
-func insertMock(db *sql.DB, fileID string, day int, month int) {
-	db.Exec("INSERT INTO songs (fileID, day, month) VALUES (?,?,?);", fileID, day, month)
-}
-
 func TestSave(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
@@ -165,7 +144,7 @@ func TestRepository_Delete(t *testing.T) {
 		{
 			"delete existing song",
 			func(db *sql.DB) {
-				insertMock(db, "mock_file_123", 1, 3)
+				insertMock(t, db, "mock_file_123", 1, 3)
 			},
 			"mock_file_123",
 			false,
@@ -182,9 +161,9 @@ func TestRepository_Delete(t *testing.T) {
 		{
 			"delete only target song",
 			func(db *sql.DB) {
-				insertMock(db, "mock_file_1", 1, 3)
-				insertMock(db, "mock_file_2", 2, 3)
-				insertMock(db, "mock_file_3", 2, 3)
+				insertMock(t, db, "mock_file_1", 1, 3)
+				insertMock(t, db, "mock_file_2", 2, 3)
+				insertMock(t, db, "mock_file_3", 2, 3)
 			},
 			"mock_file_3",
 			false,
