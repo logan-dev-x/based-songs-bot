@@ -27,3 +27,10 @@ func insertMock(t *testing.T, db *sql.DB, fileID string, day int, month int) {
 	t.Helper()
 	db.Exec("INSERT INTO songs (fileID, day, month) VALUES (?,?,?);", fileID, day, month)
 }
+
+func newTestRepository(t *testing.T, setup func(db *sql.DB)) *Repository {
+	t.Helper()
+	db := setupTestDB(t)
+	setup(db)
+	return NewRepository(db)
+}
