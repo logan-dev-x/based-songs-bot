@@ -10,5 +10,14 @@ func setupTestDB(t *testing.T) *sql.DB {
 	if err != nil {
 		t.Fatalf("Cant open memory DB: %v", err)
 	}
-	migration
+	migration := `
+	CREATE TABLE IF NOT EXISTS songs (
+		fileId TEXT NOT NULL,
+		day INTEGER NOT NULL,
+		month INTEGER NOT NULL
+	);`
+	if _, err := db.Exec(migration); err != nil {
+		t.Fatalf("Error creating table: %v", err)
+	}
+	return db
 }
