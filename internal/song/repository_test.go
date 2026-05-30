@@ -2,6 +2,7 @@ package song
 
 import (
 	"database/sql"
+	"reflect"
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -58,5 +59,91 @@ func TestSave(t *testing.T) {
 	}
 	if result.Month != mockSong.Month {
 		t.Errorf("Expected %d, but received: %d", mockSong.Month, result.Month)
+	}
+}
+
+func TestRepository_GetByDate(t *testing.T) {
+	query := "INSERT INTO songs (fileID, day, month) VALUES (?, ?, ?)"
+	tests := []struct {
+		name string // description of this test case
+		// Named input parameters for receiver constructor.
+		setup func(db *sql.DB)
+		// Named input parameters for target function.
+		day     int
+		month   int
+		want    []Song
+		wantErr bool
+	}{
+		{
+			"existend Song",
+			func(db *sql.DB) {
+				db.Exec(query, "mock_1234", 1, 3)
+			},
+			1,
+			3,
+			[]Song{
+				{
+					FileID: "mock_1234",
+					Day:    1,
+					Month:  3,
+				},
+			},
+			false,
+		},
+
+		{
+			"song not stored",
+			func(db *sql.DB) {},
+			2,
+			4,
+			[]Song{},
+			false,
+		},
+
+		{
+			"muiltiply Songs",
+			func(db *sql.DB) {
+				db.Exec(query, "mock_1234", 1, 3)
+				db.Exec(query, "mock_5432", 1, 3)
+			},
+			1,
+			3,
+			[]Song{
+				{
+					FileID: "mock_1234",
+					Day:    1,
+					Month:  3,
+				},
+				{
+					FileID: "mock_5432",
+					Day:    1,
+					Month:  3,
+				},
+			},
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			db := setupTestDB(t)
+			if tt.setup != nil {
+				tt.setup(db)
+			}
+			r := NewRepository(db)
+
+			got, gotErr := r.GetByDate(tt.day, tt.month)
+			if gotErr != nil {
+				if !tt.wantErr {
+					t.Errorf("GetByDate() failed: %v", gotErr)
+				}
+				return
+			}
+			if tt.wantErr {
+				t.Fatal("GetByDate() succeeded unexpectedly")
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("got = %v, want %v, got == nil? %v", got, tt.want, got == nil)
+			}
+		})
 	}
 }
