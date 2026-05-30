@@ -41,7 +41,7 @@ func (r *Repository) GetByDate(day int, month int) ([]Song, error) {
 		return nil, err
 	}
 
-	var songs []Song
+	songs := []Song{}
 	for rows.Next() {
 		var s Song
 		err = rows.Scan(&s.FileID, &s.Day, &s.Month)
