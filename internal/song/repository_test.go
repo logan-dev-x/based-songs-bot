@@ -8,7 +8,7 @@ import (
 )
 
 func setupTestDB(t *testing.T) *sql.DB {
-	db, err := sql.Open("sqlite3", "file::memory:?cache=shared")
+	db, err := sql.Open("sqlite3", "file::memory:")
 	if err != nil {
 		t.Fatalf("Cant open memory DB: %v", err)
 	}
