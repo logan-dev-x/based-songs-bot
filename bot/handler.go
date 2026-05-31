@@ -49,7 +49,7 @@ func (h *Handler) handleListCmd() {
 		audio := tgbot.NewAudio(h.cfg.AdminID, tgbot.FileID(s.FileID))
 		audio.Caption = fmt.Sprintf("Dia: %d\nMês: %d", s.Day, s.Month)
 
-		btn := tgbot.NewInlineKeyboardButtonData("❌Excluir", fmt.Sprintf("size: %d", len(s.FileID)))
+		btn := tgbot.NewInlineKeyboardButtonData("❌Excluir", fmt.Sprintf("%d", s.ID))
 
 		audio.ReplyMarkup = tgbot.NewInlineKeyboardMarkup(
 			tgbot.NewInlineKeyboardRow(btn))

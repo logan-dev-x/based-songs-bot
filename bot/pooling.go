@@ -2,6 +2,7 @@ package bot
 
 import (
 	"log"
+	"strconv"
 
 	tgbot "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -9,7 +10,16 @@ import (
 func pooling(h *Handler, updates tgbot.UpdatesChannel) {
 	for update := range updates {
 		if update.CallbackQuery != nil {
-			h.sendMsg(update.CallbackQuery.Data)
+			id, err := strconv.Atoi(update.CallbackQuery.Data)
+			if err != nil {
+				h.sendMsg(err.Error())
+			}
+			err = h.repo.Delete(id)
+			if err != nil {
+				h.sendMsg(err.Error())
+				continue
+			}
+			h.sendMsg("Música deletada")
 			continue
 		}
 		if update.Message == nil {
