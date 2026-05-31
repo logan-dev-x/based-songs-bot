@@ -44,3 +44,15 @@ func totalSongs(t *testing.T, db *sql.DB) int {
 	}
 	return count
 }
+
+func getByFileID(t *testing.T, db *sql.DB, id string) Song {
+	t.Helper()
+	var s Song
+	err := db.QueryRow(
+		"SELECT fileID, day, month FROM songs WHERE fileID = ?",
+		id).Scan(&s.FileID, &s.Day, &s.Month)
+	if err != nil {
+		t.Errorf("query error: %v", err)
+	}
+	return s
+}
