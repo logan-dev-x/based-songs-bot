@@ -60,7 +60,12 @@ func TestRepository_Save(t *testing.T) {
 
 			total := totalSongs(t, r.db)
 			if tt.wantCount != total {
-				t.Errorf("expect %d songs in DB, but got %d", tt.wantCount, total)
+				t.Fatalf("expect %d songs in DB, but got %d", tt.wantCount, total)
+			}
+
+			got := getByFileID(t, r.db, tt.song.FileID)
+			if !reflect.DeepEqual(tt.song, got) {
+				t.Fatalf("expect %v, got %v", tt.song, got)
 			}
 		})
 	}
