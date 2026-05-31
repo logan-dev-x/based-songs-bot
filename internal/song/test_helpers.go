@@ -34,3 +34,13 @@ func newTestRepository(t *testing.T, setup func(db *sql.DB)) *Repository {
 	setup(db)
 	return NewRepository(db)
 }
+
+func totalSongs(t *testing.T, db *sql.DB) int {
+	t.Helper()
+	var count int
+	err := db.QueryRow("SELECT COUNT(*) FROM songs;").Scan(&count)
+	if err != nil {
+		t.Errorf("query error: %v", err)
+	}
+	return count
+}

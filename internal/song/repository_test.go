@@ -190,10 +190,7 @@ func TestRepository_Delete(t *testing.T) {
 				t.Fatal("target song still exists")
 			}
 
-			err = r.db.QueryRow("SELECT COUNT(*) FROM songs;").Scan(&count)
-			if err != nil {
-				t.Fatalf("count target song: %v", err)
-			}
+			count = totalSongs(t, r.db)
 			if count != tt.wantCount {
 				t.Errorf(
 					"expect %d reamining, got %d",
