@@ -39,7 +39,7 @@ func checkAndSend(h *Handler, loc *time.Location) {
 	}
 
 	for _, song := range songs {
-		h.sendAudio(song.FileID, h.cfg.Caption)
+		h.sendAudio(h.cfg.ChannelID, song.FileID, h.cfg.Caption)
 
 		err = h.repo.Delete(song.FileID)
 		if err != nil {

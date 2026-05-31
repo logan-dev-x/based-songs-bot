@@ -47,7 +47,7 @@ func (h *Handler) handleListCmd() {
 
 	for _, s := range songs {
 		caption := fmt.Sprintf("Dia: %d\nMês: %d", s.Day, s.Month)
-		h.sendAudio(s.FileID, caption)
+		h.sendAudio(h.cfg.AdminID, s.FileID, caption)
 	}
 }
 
@@ -78,8 +78,8 @@ func (h *Handler) sendMsg(text string) {
 	}
 }
 
-func (h *Handler) sendAudio(fileID, caption string) {
-	audio := tgbot.NewAudio(h.cfg.ChannelID, tgbot.FileID(fileID))
+func (h *Handler) sendAudio(chatID int64, fileID, caption string) {
+	audio := tgbot.NewAudio(chatID, tgbot.FileID(fileID))
 	audio.Caption = caption
 
 	if _, err := h.bot.Send(audio); err != nil {
