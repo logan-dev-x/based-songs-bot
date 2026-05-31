@@ -25,7 +25,10 @@ func setupTestDB(t *testing.T) *sql.DB {
 
 func insertMock(t *testing.T, db *sql.DB, fileID string, day int, month int) {
 	t.Helper()
-	db.Exec("INSERT INTO songs (fileID, day, month) VALUES (?,?,?);", fileID, day, month)
+	_, err := db.Exec("INSERT INTO songs (fileID, day, month) VALUES (?,?,?);", fileID, day, month)
+	if err != nil {
+		t.Errorf("query error: %v", err)
+	}
 }
 
 func newTestRepository(t *testing.T, setup func(db *sql.DB)) *Repository {
