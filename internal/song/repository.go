@@ -33,7 +33,7 @@ func (r *Repository) GetAll() ([]Song, error) {
 		return nil, err
 	}
 
-	var songs []Song
+	songs := []Song{}
 	for rows.Next() {
 		var s Song
 		err = rows.Scan(&s.FileID, &s.Day, &s.Month)
