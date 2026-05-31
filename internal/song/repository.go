@@ -69,13 +69,3 @@ func (r *Repository) Delete(fileID string) error {
 	_, err := r.db.Exec("DELETE FROM songs WHERE fileID = ?", fileID)
 	return err
 }
-
-func (r *Repository) HasAppointment() (bool, error) {
-	var count int
-	err := r.db.QueryRow("SELECT COUNT(*) FROM songs").Scan(&count)
-	if err != nil {
-		return false, err
-	}
-
-	return count > 0, nil
-}
