@@ -28,6 +28,19 @@ func TestRepository_Save(t *testing.T) {
 			false,
 			1,
 		},
+		{
+			"error when song already exists",
+			func(db *sql.DB) {
+				insertMock(t, db, "mock_2", 2, 6)
+			},
+			Song{
+				FileID: "mock_2",
+				Day:    2,
+				Month:  5,
+			},
+			true,
+			1,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
