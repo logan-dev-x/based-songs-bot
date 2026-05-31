@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func setupTestDB(t *testing.T) *sql.DB {
+func SetupTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 	db, err := sql.Open("sqlite3", "file::memory:")
 	if err != nil {
@@ -31,9 +31,9 @@ func insertMock(t *testing.T, db *sql.DB, fileID string, day int, month int) {
 	}
 }
 
-func newTestRepository(t *testing.T, setup func(db *sql.DB)) *Repository {
+func NewTestRepository(t *testing.T, setup func(db *sql.DB)) *Repository {
 	t.Helper()
-	db := setupTestDB(t)
+	db := SetupTestDB(t)
 	setup(db)
 	return NewRepository(db)
 }

@@ -44,7 +44,7 @@ func TestRepository_Save(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := newTestRepository(t, tt.setup)
+			r := NewTestRepository(t, tt.setup)
 
 			gotErr := r.Save(tt.song)
 			if gotErr != nil {
@@ -133,7 +133,7 @@ func TestRepository_GetByDate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := newTestRepository(t, tt.setup)
+			r := NewTestRepository(t, tt.setup)
 
 			got, gotErr := r.GetByDate(tt.day, tt.month)
 			if gotErr != nil {
@@ -193,7 +193,7 @@ func TestRepository_Delete(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := newTestRepository(t, tt.setup)
+			r := NewTestRepository(t, tt.setup)
 
 			gotErr := r.Delete(tt.fileID)
 			if gotErr != nil {
@@ -260,7 +260,7 @@ func TestRepository_GetAll(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := newTestRepository(t, tt.setup)
+			r := NewTestRepository(t, tt.setup)
 
 			got, gotErr := r.GetAll()
 			if gotErr != nil {
