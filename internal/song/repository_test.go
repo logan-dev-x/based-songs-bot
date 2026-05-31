@@ -91,6 +91,7 @@ func TestRepository_GetByDate(t *testing.T) {
 			3,
 			[]Song{
 				{
+					ID:     1,
 					FileID: "mock_1234",
 					Day:    1,
 					Month:  3,
@@ -118,11 +119,13 @@ func TestRepository_GetByDate(t *testing.T) {
 			3,
 			[]Song{
 				{
+					ID:     1,
 					FileID: "mock_1234",
 					Day:    1,
 					Month:  3,
 				},
 				{
+					ID:     2,
 					FileID: "mock_5432",
 					Day:    1,
 					Month:  3,
@@ -158,7 +161,7 @@ func TestRepository_Delete(t *testing.T) {
 		// Named input parameters for receiver constructor.
 		setup func(db *sql.DB)
 		// Named input parameters for target function.
-		fileID    string
+		ID        int
 		wantErr   bool
 		wantCount int
 	}{
@@ -167,7 +170,7 @@ func TestRepository_Delete(t *testing.T) {
 			func(db *sql.DB) {
 				insertMock(t, db, "mock_file_123", 1, 3)
 			},
-			"mock_file_123",
+			1,
 			false,
 			0,
 		},
@@ -175,7 +178,7 @@ func TestRepository_Delete(t *testing.T) {
 			"delete non-existing song",
 			func(db *sql.DB) {
 			},
-			"mock_file_123",
+			1,
 			false,
 			0,
 		},
@@ -186,7 +189,7 @@ func TestRepository_Delete(t *testing.T) {
 				insertMock(t, db, "mock_file_2", 2, 3)
 				insertMock(t, db, "mock_file_3", 2, 3)
 			},
-			"mock_file_3",
+			3,
 			false,
 			2,
 		},
@@ -195,7 +198,7 @@ func TestRepository_Delete(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			r := NewTestRepository(t, tt.setup)
 
-			gotErr := r.Delete(tt.fileID)
+			gotErr := r.Delete(tt.ID)
 			if gotErr != nil {
 				if !tt.wantErr {
 					t.Errorf("Delete() failed: %v", gotErr)
@@ -208,7 +211,7 @@ func TestRepository_Delete(t *testing.T) {
 
 			var count int
 
-			err := r.db.QueryRow("SELECT COUNT(*) FROM songs WHERE fileID = ?", tt.fileID).Scan(&count)
+			err := r.db.QueryRow("SELECT COUNT(*) FROM songs WHERE id = ?", tt.ID).Scan(&count)
 			if err != nil {
 				t.Fatalf("count target song: %v", err)
 			}
@@ -251,9 +254,9 @@ func TestRepository_GetAll(t *testing.T) {
 				insertMock(t, db, "mock_3", 3, 2)
 			},
 			[]Song{
-				{"mock_1", 1, 2},
-				{"mock_2", 2, 2},
-				{"mock_3", 3, 2},
+				{1, "mock_1", 1, 2},
+				{2, "mock_2", 2, 2},
+				{3, "mock_3", 3, 2},
 			},
 			false,
 		},

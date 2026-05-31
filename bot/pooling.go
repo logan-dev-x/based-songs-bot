@@ -8,6 +8,10 @@ import (
 
 func pooling(h *Handler, updates tgbot.UpdatesChannel) {
 	for update := range updates {
+		if update.CallbackQuery != nil {
+			h.sendMsg(update.CallbackQuery.Data)
+			continue
+		}
 		if update.Message == nil {
 			continue
 		}

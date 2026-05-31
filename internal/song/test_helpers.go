@@ -13,6 +13,7 @@ func SetupTestDB(t *testing.T) *sql.DB {
 	}
 	migration := `
 	CREATE TABLE IF NOT EXISTS songs (
+	  id INTEGER PRIMARY KEY AUTOINCREMENT,
 		fileId TEXT NOT NULL,
 		day INTEGER NOT NULL,
 		month INTEGER NOT NULL

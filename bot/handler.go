@@ -46,8 +46,17 @@ func (h *Handler) handleListCmd() {
 	}
 
 	for _, s := range songs {
-		caption := fmt.Sprintf("Dia: %d\nMês: %d", s.Day, s.Month)
-		h.sendAudio(h.cfg.AdminID, s.FileID, caption)
+		audio := tgbot.NewAudio(h.cfg.AdminID, tgbot.FileID(s.FileID))
+		audio.Caption = fmt.Sprintf("Dia: %d\nMês: %d", s.Day, s.Month)
+
+		btn := tgbot.NewInlineKeyboardButtonData("❌Excluir", fmt.Sprintf("size: %d", len(s.FileID)))
+
+		audio.ReplyMarkup = tgbot.NewInlineKeyboardMarkup(
+			tgbot.NewInlineKeyboardRow(btn))
+
+		if _, err := h.bot.Send(audio); err != nil {
+			log.Printf("Error executing bot.Send(Audio): %v", err)
+		}
 	}
 }
 

@@ -28,7 +28,7 @@ func (r *Repository) Save(s Song) error {
 }
 
 func (r *Repository) GetAll() ([]Song, error) {
-	rows, err := r.db.Query("SELECT fileID, day, month FROM songs")
+	rows, err := r.db.Query("SELECT id, fileID, day, month FROM songs")
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +36,7 @@ func (r *Repository) GetAll() ([]Song, error) {
 	songs := []Song{}
 	for rows.Next() {
 		var s Song
-		err = rows.Scan(&s.FileID, &s.Day, &s.Month)
+		err = rows.Scan(&s.ID, &s.FileID, &s.Day, &s.Month)
 		if err != nil {
 			return nil, err
 		}
@@ -47,7 +47,7 @@ func (r *Repository) GetAll() ([]Song, error) {
 }
 
 func (r *Repository) GetByDate(day int, month int) ([]Song, error) {
-	rows, err := r.db.Query("SELECT fileID, day, month FROM songs WHERE day = ? AND month = ?", day, month)
+	rows, err := r.db.Query("SELECT id, fileID, day, month FROM songs WHERE day = ? AND month = ?", day, month)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (r *Repository) GetByDate(day int, month int) ([]Song, error) {
 	songs := []Song{}
 	for rows.Next() {
 		var s Song
-		err = rows.Scan(&s.FileID, &s.Day, &s.Month)
+		err = rows.Scan(&s.ID, &s.FileID, &s.Day, &s.Month)
 		if err != nil {
 			return nil, err
 		}
@@ -65,7 +65,15 @@ func (r *Repository) GetByDate(day int, month int) ([]Song, error) {
 	return songs, nil
 }
 
-func (r *Repository) Delete(fileID string) error {
-	_, err := r.db.Exec("DELETE FROM songs WHERE fileID = ?", fileID)
+func (r *Repository) Delete(id int) error {
+	_, err := r.db.Exec("DELETE FROM songs WHERE id = ?", id)
 	return err
+}
+
+func (r *Repository) GetByID(id int) (Song, error) {
+	s := Song{}
+	err := r.db.QueryRow(
+		"SELECT id, fileID, day,month FROM songs WHERE id = ?;", id).Scan(
+		&s.ID, &s.FileID, &s.Day, &s.Month)
+	return s, err
 }

@@ -13,6 +13,7 @@ func InitDB() *sql.DB {
 
 	migration := `
 	CREATE TABLE IF NOT EXISTS songs (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		fileID TEXT NOT NULL,
 		day INTEGER NOT NULL,
 		month INTEGER NOT NULL
