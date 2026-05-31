@@ -16,5 +16,12 @@ func extractScheduleDate(caption string) (int, int, error) {
 	day, _ := strconv.Atoi(matches[1])
 	month, _ := strconv.Atoi(matches[2])
 
+	if day > 31 || day < 1 {
+		return 0, 0, errors.New("dia inválido")
+	}
+	if month > 12 || month < 1 {
+		return 0, 0, errors.New("mês inválido")
+	}
+
 	return day, month, nil
 }
