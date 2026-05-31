@@ -2,6 +2,7 @@ package bot
 
 import (
 	"errors"
+	"fmt"
 	"regexp"
 	"strconv"
 )
@@ -24,4 +25,16 @@ func extractScheduleDate(caption string) (int, int, error) {
 	}
 
 	return day, month, nil
+}
+
+func extractActionAndID(content string) (string, int, error) {
+	r, _ := regexp.Compile(`(\w+): (\d+)`)
+	matches := r.FindStringSubmatch(content)
+	if len(matches) < 3 {
+		return "", 0, fmt.Errorf("não foi possível identificar os valores de aćão em: %s", content)
+	}
+
+	id, _ := strconv.Atoi(matches[2])
+
+	return matches[1], id, nil
 }

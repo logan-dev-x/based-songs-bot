@@ -49,10 +49,11 @@ func (h *Handler) handleListCmd() {
 		audio := tgbot.NewAudio(h.cfg.AdminID, tgbot.FileID(s.FileID))
 		audio.Caption = fmt.Sprintf("Dia: %d\nMês: %d", s.Day, s.Month)
 
-		btn := tgbot.NewInlineKeyboardButtonData("❌Excluir", fmt.Sprintf("%d", s.ID))
+		sendNowBtn := tgbot.NewInlineKeyboardButtonData("▶️Enviar", fmt.Sprintf("sendNow: %d", s.ID))
+		deleteBtn := tgbot.NewInlineKeyboardButtonData("❌Excluir", fmt.Sprintf("delete: %d", s.ID))
 
 		audio.ReplyMarkup = tgbot.NewInlineKeyboardMarkup(
-			tgbot.NewInlineKeyboardRow(btn))
+			tgbot.NewInlineKeyboardRow(sendNowBtn, deleteBtn))
 
 		if _, err := h.bot.Send(audio); err != nil {
 			log.Printf("Error executing bot.Send(Audio): %v", err)
@@ -94,4 +95,21 @@ func (h *Handler) sendAudio(chatID int64, fileID, caption string) {
 	if _, err := h.bot.Send(audio); err != nil {
 		log.Printf("Error executing bot.Send(Audio): %v", err)
 	}
+}
+
+func (h *Handler) sendAudioNow(id int) {
+	song, err := h.repo.GetByID(id)
+	if err != nil {
+		h.sendMsg(err.Error())
+	}
+	h.sendAudio(h.cfg.ChannelID, song.FileID, h.cfg.Caption)
+}
+
+func (h *Handler) deleteSong(id int) {
+	err := h.repo.Delete(id)
+	if err != nil {
+		h.sendMsg(err.Error())
+		return
+	}
+	h.sendMsg("Música deletada")
 }
