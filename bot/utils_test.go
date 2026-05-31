@@ -39,6 +39,20 @@ func Test_extractScheduleDate(t *testing.T) {
 			0,
 			true,
 		},
+		{
+			"invalid day",
+			"32/06",
+			0,
+			0,
+			true,
+		},
+		{
+			"invalid month",
+			"2/13",
+			0,
+			0,
+			true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
