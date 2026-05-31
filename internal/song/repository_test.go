@@ -227,3 +227,41 @@ func TestRepository_Delete(t *testing.T) {
 		})
 	}
 }
+
+func TestRepository_GetAll(t *testing.T) {
+	tests := []struct {
+		name string // description of this test case
+		// Named input parameters for receiver constructor.
+		setup   func(db *sql.DB)
+		want    []Song
+		wantErr bool
+	}{
+		{
+			"receive a empty list when there no data",
+			func(db *sql.DB) {
+			},
+			[]Song{},
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := newTestRepository(t, tt.setup)
+
+			got, gotErr := r.GetAll()
+			if gotErr != nil {
+				if !tt.wantErr {
+					t.Errorf("GetAll() failed: %v", gotErr)
+				}
+				return
+			}
+			if tt.wantErr {
+				t.Fatal("GetAll() succeeded unexpectedly")
+			}
+
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetAll() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
