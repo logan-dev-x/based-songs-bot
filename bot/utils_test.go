@@ -25,6 +25,13 @@ func Test_extractScheduleDate(t *testing.T) {
 			2,
 			false,
 		},
+		{
+			"day and month with only one digit",
+			"2/6",
+			2,
+			6,
+			false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
