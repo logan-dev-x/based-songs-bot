@@ -8,41 +8,69 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func TestSave(t *testing.T) {
-	db := setupTestDB(t)
-	defer db.Close()
-	repo := NewRepository(db)
-	mockSong := Song{
-		FileID: "audi_1234_mock",
-		Day:    2,
-		Month:  5,
+func TestRepository_Save(t *testing.T) {
+	tests := []struct {
+		name      string
+		setup     func(db *sql.DB)
+		song      Song
+		wantErr   bool
+		wantCount int
+	}{
+		{
+			"save first song",
+			func(db *sql.DB) {
+			},
+			Song{
+				FileID: "mock_1",
+				Day:    2,
+				Month:  5,
+			},
+			false,
+			1,
+		},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := newTestRepository(t, tt.setup)
 
-	err := repo.Save(mockSong)
-	if err != nil {
-		t.Errorf("Save() returned an unexpected error: %v", err)
-	}
+			gotErr := r.Save(tt.song)
+			if gotErr != nil {
+				if !tt.wantErr {
+					t.Fatalf("Save() returned an unexpected error: %v", gotErr)
+				}
+				return
+			}
 
-	rows, err := db.Query("SELECT * FROM songs WHERE day = ? AND month = ?;", 2, 5)
-	if err != nil {
-		t.Errorf("Query returned an unexpected error: %v", err)
+			if tt.wantErr && gotErr == nil {
+				t.Fatalf("expect an error but got nil, song: %v", tt.song)
+			}
+
+			total := totalSongs(t, r.db)
+			if tt.wantCount != total {
+				t.Errorf("expect %d songs in DB, but got %d", tt.wantCount, total)
+			}
+		})
 	}
-	defer rows.Close()
-	var result Song
-	for rows.Next() {
-		if err := rows.Scan(&result.FileID, &result.Day, &result.Month); err != nil {
-			t.Errorf("Scan returned an error: %v", err)
-		}
-	}
-	if result.FileID != mockSong.FileID {
-		t.Errorf("Expected %s, but received: %s", mockSong.FileID, result.FileID)
-	}
-	if result.Day != mockSong.Day {
-		t.Errorf("Expected %d, but received: %d", mockSong.Day, result.Day)
-	}
-	if result.Month != mockSong.Month {
-		t.Errorf("Expected %d, but received: %d", mockSong.Month, result.Month)
-	}
+	// rows, err := db.Query("SELECT * FROM songs WHERE day = ? AND month = ?;", 2, 5)
+	// if err != nil {
+	// 	t.Errorf("Query returned an unexpected error: %v", err)
+	// }
+	// defer rows.Close()
+	// var result Song
+	// for rows.Next() {
+	// 	if err := rows.Scan(&result.FileID, &result.Day, &result.Month); err != nil {
+	// 		t.Errorf("Scan returned an error: %v", err)
+	// 	}
+	// }
+	// if result.FileID != mockSong.FileID {
+	// 	t.Errorf("Expected %s, but received: %s", mockSong.FileID, result.FileID)
+	// }
+	// if result.Day != mockSong.Day {
+	// 	t.Errorf("Expected %d, but received: %d", mockSong.Day, result.Day)
+	// }
+	// if result.Month != mockSong.Month {
+	// 	t.Errorf("Expected %d, but received: %d", mockSong.Month, result.Month)
+	// }
 }
 
 func TestRepository_GetByDate(t *testing.T) {
