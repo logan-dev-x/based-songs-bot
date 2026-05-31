@@ -32,6 +32,13 @@ func Test_extractScheduleDate(t *testing.T) {
 			6,
 			false,
 		},
+		{
+			"just text, without date",
+			"foo and boo",
+			0,
+			0,
+			true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
