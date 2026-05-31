@@ -243,6 +243,20 @@ func TestRepository_GetAll(t *testing.T) {
 			[]Song{},
 			false,
 		},
+		{
+			"ensure to receive list with correct items",
+			func(db *sql.DB) {
+				insertMock(t, db, "mock_1", 1, 2)
+				insertMock(t, db, "mock_2", 2, 2)
+				insertMock(t, db, "mock_3", 3, 2)
+			},
+			[]Song{
+				{"mock_1", 1, 2},
+				{"mock_2", 2, 2},
+				{"mock_3", 3, 2},
+			},
+			false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
