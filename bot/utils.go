@@ -7,7 +7,7 @@ import (
 )
 
 func extractScheduleDate(caption string) (int, int, error) {
-	r, _ := regexp.Compile(`(\d{2})\/(\d{2})`)
+	r, _ := regexp.Compile(`(\d{1,2})\/(\d{1,2})`)
 	matches := r.FindStringSubmatch(caption)
 	if len(matches) < 3 {
 		return 0, 0, errors.New("não foi possível reconhecer a data do agendamento")
