@@ -103,6 +103,7 @@ func (h *Handler) sendAudioNow(id int) {
 		h.sendMsg(err.Error())
 	}
 	h.sendAudio(h.cfg.ChannelID, song.FileID, h.cfg.Caption)
+	h.deleteSong(id)
 }
 
 func (h *Handler) deleteSong(id int) {
