@@ -1,6 +1,9 @@
 package song
 
-import "database/sql"
+import (
+	"database/sql"
+	"errors"
+)
 
 type Repository struct {
 	db *sql.DB
@@ -11,8 +14,16 @@ func NewRepository(db *sql.DB) *Repository {
 }
 
 func (r *Repository) Save(s Song) error {
+	var count int
+	err := r.db.QueryRow("SELECT COUNT(*) FROM songs WHERE fileID = ?;", s.FileID).Scan(&count)
+	if err != nil {
+		return err
+	}
+	if count != 0 {
+		return errors.New("an song with this fileID already exists")
+	}
 	query := "INSERT INTO songs (fileID, day, month) VALUES (?, ?, ?)"
-	_, err := r.db.Exec(query, s.FileID, s.Day, s.Month)
+	_, err = r.db.Exec(query, s.FileID, s.Day, s.Month)
 	return err
 }
 
