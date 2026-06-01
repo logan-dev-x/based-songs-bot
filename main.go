@@ -51,6 +51,14 @@ func main() {
 }
 
 func setupLogger() {
+	// Se a variável PORT existir, significa que estamos rodando no Render (Produção)
+	if os.Getenv("PORT") != "" {
+		// No Render, usamos apenas o console padrão (terminal)
+		log.SetOutput(os.Stdout)
+		log.SetFlags(log.LstdFlags | log.Lshortfile)
+		log.Println("[INFO] Logger inicializado em modo de produção (Console OS).")
+		return
+	}
 	file, err := os.OpenFile("log.txt", os.O_CREATE|os.O_WRONLY, 0o664)
 	if err != nil {
 		log.Fatalf("logger error: %v", err)
