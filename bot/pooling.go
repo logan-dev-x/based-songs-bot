@@ -1,7 +1,7 @@
 package bot
 
 import (
-	"log"
+	"fmt"
 
 	tgbot "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -26,7 +26,7 @@ func pooling(h *Handler, updates tgbot.UpdatesChannel) {
 			continue
 		}
 		if update.Message.From.ID != h.cfg.AdminID {
-			log.Printf("Tentativa de acesso bloqueado. ID : %v", update.Message.Chat.ID)
+			h.sendMsg(fmt.Sprintf("Tentativa de acesso bloqueado. ID : %v", update.Message.Chat.ID))
 			continue
 		}
 
