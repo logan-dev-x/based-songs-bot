@@ -26,7 +26,7 @@ func pooling(h *Handler, updates tgbot.UpdatesChannel) {
 			continue
 		}
 		if update.Message.From.ID != h.cfg.AdminID {
-			h.sendMsg(fmt.Sprintf("Tentativa de acesso bloqueado. ID : %v", update.Message.Chat.ID))
+			h.sendMsg(fmt.Sprintf("Tentativa de acesso bloqueado. user: @%s", update.Message.From.UserName))
 			continue
 		}
 
