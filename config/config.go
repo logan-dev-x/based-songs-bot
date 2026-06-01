@@ -17,10 +17,7 @@ type Config struct {
 }
 
 func Load() Config {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("Trying to load envs: %v", err)
-	}
+	_ = godotenv.Load()
 
 	token := os.Getenv("TELEGRAM_APITOKEN")
 	if token == "" {
