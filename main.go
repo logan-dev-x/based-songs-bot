@@ -31,10 +31,18 @@ func main() {
 			log.Printf("Erro no servidor HTTP: %v", err)
 		}
 	}()
+
+	log.Println("[DEBUG] A carregar Logger")
 	setupLogger()
 
+	log.Println("[DEBUG] 1. A carregar configurações...")
 	cfg := config.Load()
 
+	// Print de segurança para ver se o token não está vazio (mostra só o tamanho para proteger)
+	log.Printf("[DEBUG] Tamanho do Token recebido: %d caracteres", len(cfg.Token))
+
+	log.Println("[DEBUG] 2. A iniciar banco de dados...")
+	// Adicione um log dentro do seu database.Init se possível para ver se ele passa daqui
 	db := database.InitDB()
 	defer db.Close()
 
