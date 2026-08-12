@@ -1,3 +1,21 @@
+# Arquivos gerados pelo Cargo
+/target/
+
+# Lockfile
+# Mantenha se este projeto for uma aplicação (CLI e bot).
+# Remova esta linha se for uma biblioteca.
+/Cargo.lock
+
+# Arquivos de backup de editores
+**/*.rs.bk
+
+# Variáveis de ambiente
 .env
-*.db
-log.txt
+.env.*
+
+# Logs
+*.log
+
+# Arquivos temporários
+*.tmp
+*.temp
