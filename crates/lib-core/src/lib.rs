@@ -26,24 +26,23 @@ fn read_wav<P: AsRef<Path>>(path: P) -> Result<Wav> {
         ));
     }
 
-    let chunk = read_chunk(&mut file)?;
+    loop {
+        let chunk = read_chunk(&mut file)?;
 
-    if chunk.id != *b"fmt " {
-        return Err(Error::new(
-            std::io::ErrorKind::InvalidData,
-            "Expected fmt chunk",
-        ));
+        if chunk.id != *b"fmt " {
+            continue;
+        }
+
+        let channels = u16::from_le_bytes(chunk.data[2..4].try_into().unwrap());
+        let sample_rate = u32::from_le_bytes(chunk.data[4..8].try_into().unwrap());
+        let bits_per_sample = u16::from_le_bytes(chunk.data[14..16].try_into().unwrap());
+
+        return Ok(Wav {
+            sample_rate,
+            channels,
+            bits_per_sample,
+        });
     }
-
-    let channels = u16::from_le_bytes(chunk.data[2..4].try_into().unwrap());
-    let sample_rate = u32::from_le_bytes(chunk.data[4..8].try_into().unwrap());
-    let bits_per_sample = u16::from_le_bytes(chunk.data[14..16].try_into().unwrap());
-
-    Ok(Wav {
-        sample_rate,
-        channels,
-        bits_per_sample,
-    })
 }
 
 fn read_chunk(file: &mut File) -> Result<Chunk> {
@@ -216,6 +215,43 @@ mod tests {
 
         assert_eq!(chunk.id, *b"fmt ");
         assert_eq!(chunk.data, vec![1, 2, 3, 4]);
+
+        remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn find_fmt_after_junk() {
+        let path = "chunk.wav";
+        let mut file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(path)
+            .unwrap();
+        let mut header = Vec::new();
+        header.extend_from_slice(b"RIFF");
+        header.extend_from_slice(&[0u8; 4]);
+        header.extend_from_slice(b"WAVE");
+
+        header.extend_from_slice(b"JUNK");
+        header.extend_from_slice(&4u32.to_le_bytes());
+        header.extend_from_slice(&[1, 2, 3, 4]);
+
+        header.extend_from_slice(b"fmt ");
+        header.extend_from_slice(&16u32.to_le_bytes());
+        header.extend_from_slice(&[0u8; 2]);
+        header.extend_from_slice(&2u16.to_le_bytes());
+        header.extend_from_slice(&44_100u32.to_le_bytes());
+        header.extend_from_slice(&[0u8; 4]);
+        header.extend_from_slice(&[0u8; 2]);
+        header.extend_from_slice(&16u16.to_le_bytes());
+
+        file.write_all(&header).unwrap();
+        file.seek(std::io::SeekFrom::Start(0)).unwrap();
+
+        let wav = read_wav(path).unwrap();
+
+        assert_eq!(wav.sample_rate, 44100);
 
         remove_file(path).unwrap();
     }
