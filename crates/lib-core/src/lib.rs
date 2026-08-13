@@ -8,6 +8,11 @@ struct Wav {
     bits_per_sample: u16,
 }
 
+struct Chunk {
+    id: [u8; 4],
+    data: Vec<u8>,
+}
+
 fn read_wav<P: AsRef<Path>>(path: P) -> Result<Wav> {
     let mut file = File::open(path)?;
     let mut header = [0u8; 12];
@@ -35,9 +40,23 @@ fn read_wav<P: AsRef<Path>>(path: P) -> Result<Wav> {
     })
 }
 
+fn read_chunk(file: &mut File) -> Result<Chunk> {
+    let mut id = [0u8; 4];
+    file.read_exact(&mut id)?;
+
+    let mut size_bytes = [0u8; 4];
+    file.read_exact(&mut size_bytes)?;
+    let size = u32::from_le_bytes(size_bytes);
+
+    let mut data = vec![0u8; size as usize];
+    file.read_exact(&mut data)?;
+
+    Ok(Chunk { id, data })
+}
+
 #[cfg(test)]
 mod tests {
-    use std::fs::remove_file;
+    use std::fs::{OpenOptions, remove_file};
 
     use super::*;
 
@@ -165,6 +184,31 @@ mod tests {
         let wav = read_wav(path).unwrap();
 
         assert_eq!(wav.bits_per_sample, 16);
+        remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn read_chunk_fmt() {
+        let path = "chunk.wav";
+        let mut file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(path)
+            .unwrap();
+        let mut header = Vec::new();
+        header.extend_from_slice(b"fmt ");
+        header.extend_from_slice(&4u32.to_le_bytes());
+        header.extend_from_slice(&[1, 2, 3, 4]);
+
+        file.write_all(&header).unwrap();
+        file.seek(std::io::SeekFrom::Start(0)).unwrap();
+
+        let chunk = read_chunk(&mut file).unwrap();
+
+        assert_eq!(chunk.id, *b"fmt ");
+        assert_eq!(chunk.data, vec![1, 2, 3, 4]);
+
         remove_file(path).unwrap();
     }
 }
