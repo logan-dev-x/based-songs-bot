@@ -5,6 +5,7 @@ use std::path::Path;
 struct Wav {
     sample_rate: u32,
     channels: u16,
+    bits_per_sample: u16,
 }
 
 fn read_wav<P: AsRef<Path>>(path: P) -> Result<Wav> {
@@ -20,15 +21,17 @@ fn read_wav<P: AsRef<Path>>(path: P) -> Result<Wav> {
         ));
     }
 
-    let mut fmt_header = [0u8; 16];
+    let mut fmt_header = [0u8; 24];
     file.read_exact(&mut fmt_header)?;
 
     let sample_rate = u32::from_le_bytes(fmt_header[12..16].try_into().unwrap());
     let channels = u16::from_le_bytes(fmt_header[10..12].try_into().unwrap());
+    let bits_per_sample = u16::from_le_bytes(fmt_header[22..24].try_into().unwrap());
 
     Ok(Wav {
-        sample_rate: sample_rate,
-        channels: channels,
+        sample_rate,
+        channels,
+        bits_per_sample,
     })
 }
 
@@ -44,7 +47,7 @@ mod tests {
         let mut file = File::create(path).unwrap();
         let mut header = Vec::new();
         header.extend_from_slice(b"RIFFxxxxWAVE");
-        header.extend_from_slice(&[0u8; 16]);
+        header.extend_from_slice(&[0u8; 24]);
         file.write_all(&header).unwrap();
 
         let res = read_wav(path);
@@ -65,7 +68,7 @@ mod tests {
         let mut file = File::create(path).unwrap();
         let mut header = Vec::new();
         header.extend_from_slice(b"RIFFxxxxWAVE");
-        header.extend_from_slice(&[0u8; 16]);
+        header.extend_from_slice(&[0u8; 24]);
         file.write_all(&header).unwrap();
 
         let res = read_wav(path);
@@ -100,6 +103,9 @@ mod tests {
         header.extend_from_slice(&[0u8; 2]);
         header.extend_from_slice(&[0u8; 2]);
         header.extend_from_slice(&44_100u32.to_le_bytes());
+        header.extend_from_slice(&[0u8; 4]);
+        header.extend_from_slice(&[0u8; 2]);
+        header.extend_from_slice(&[0u8; 2]);
 
         file.write_all(&header).unwrap();
         file.sync_all().unwrap();
@@ -124,12 +130,41 @@ mod tests {
         header.extend_from_slice(&[0u8; 2]);
         header.extend_from_slice(&2u16.to_le_bytes());
         header.extend_from_slice(&44_100u32.to_le_bytes());
+        header.extend_from_slice(&[0u8; 4]);
+        header.extend_from_slice(&[0u8; 2]);
+        header.extend_from_slice(&[0u8; 2]);
 
         file.write_all(&header).unwrap();
 
         let wav = read_wav(path).unwrap();
 
         assert_eq!(wav.channels, 2);
+        remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn wav_bits_per_sample() {
+        let path = "bits_per_sample.wav";
+        let mut file = File::create(path).unwrap();
+        let mut header = Vec::new();
+        header.extend_from_slice(b"RIFF");
+        header.extend_from_slice(&[0u8; 4]);
+        header.extend_from_slice(b"WAVE");
+
+        header.extend_from_slice(b"fmt ");
+        header.extend_from_slice(&[0u8; 4]);
+        header.extend_from_slice(&[0u8; 2]);
+        header.extend_from_slice(&2u16.to_le_bytes());
+        header.extend_from_slice(&44_100u32.to_le_bytes());
+        header.extend_from_slice(&[0u8; 4]);
+        header.extend_from_slice(&[0u8; 2]);
+        header.extend_from_slice(&16u16.to_le_bytes());
+
+        file.write_all(&header).unwrap();
+
+        let wav = read_wav(path).unwrap();
+
+        assert_eq!(wav.bits_per_sample, 16);
         remove_file(path).unwrap();
     }
 }
