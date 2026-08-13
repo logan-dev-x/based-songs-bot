@@ -26,12 +26,18 @@ fn read_wav<P: AsRef<Path>>(path: P) -> Result<Wav> {
         ));
     }
 
-    let mut fmt_header = [0u8; 24];
-    file.read_exact(&mut fmt_header)?;
+    let chunk = read_chunk(&mut file)?;
 
-    let sample_rate = u32::from_le_bytes(fmt_header[12..16].try_into().unwrap());
-    let channels = u16::from_le_bytes(fmt_header[10..12].try_into().unwrap());
-    let bits_per_sample = u16::from_le_bytes(fmt_header[22..24].try_into().unwrap());
+    if chunk.id != *b"fmt " {
+        return Err(Error::new(
+            std::io::ErrorKind::InvalidData,
+            "Expected fmt chunk",
+        ));
+    }
+
+    let channels = u16::from_le_bytes(chunk.data[2..4].try_into().unwrap());
+    let sample_rate = u32::from_le_bytes(chunk.data[4..8].try_into().unwrap());
+    let bits_per_sample = u16::from_le_bytes(chunk.data[14..16].try_into().unwrap());
 
     Ok(Wav {
         sample_rate,
@@ -65,8 +71,9 @@ mod tests {
         let path = "exists.wav";
         let mut file = File::create(path).unwrap();
         let mut header = Vec::new();
-        header.extend_from_slice(b"RIFFxxxxWAVE");
-        header.extend_from_slice(&[0u8; 24]);
+        header.extend_from_slice(b"RIFFxxxxWAVEfmt ");
+        header.extend_from_slice(&16u32.to_le_bytes());
+        header.extend_from_slice(&[0u8; 20]);
         file.write_all(&header).unwrap();
 
         let res = read_wav(path);
@@ -86,8 +93,9 @@ mod tests {
         let path = "valid.wav";
         let mut file = File::create(path).unwrap();
         let mut header = Vec::new();
-        header.extend_from_slice(b"RIFFxxxxWAVE");
-        header.extend_from_slice(&[0u8; 24]);
+        header.extend_from_slice(b"RIFFxxxxWAVEfmt ");
+        header.extend_from_slice(&16u32.to_le_bytes());
+        header.extend_from_slice(&[0u8; 20]);
         file.write_all(&header).unwrap();
 
         let res = read_wav(path);
@@ -118,7 +126,7 @@ mod tests {
         header.extend_from_slice(b"WAVE");
 
         header.extend_from_slice(b"fmt ");
-        header.extend_from_slice(&[0u8; 4]);
+        header.extend_from_slice(&16u32.to_le_bytes());
         header.extend_from_slice(&[0u8; 2]);
         header.extend_from_slice(&[0u8; 2]);
         header.extend_from_slice(&44_100u32.to_le_bytes());
@@ -145,7 +153,7 @@ mod tests {
         header.extend_from_slice(b"WAVE");
 
         header.extend_from_slice(b"fmt ");
-        header.extend_from_slice(&[0u8; 4]);
+        header.extend_from_slice(&16u32.to_le_bytes());
         header.extend_from_slice(&[0u8; 2]);
         header.extend_from_slice(&2u16.to_le_bytes());
         header.extend_from_slice(&44_100u32.to_le_bytes());
@@ -171,7 +179,7 @@ mod tests {
         header.extend_from_slice(b"WAVE");
 
         header.extend_from_slice(b"fmt ");
-        header.extend_from_slice(&[0u8; 4]);
+        header.extend_from_slice(&16u32.to_le_bytes());
         header.extend_from_slice(&[0u8; 2]);
         header.extend_from_slice(&2u16.to_le_bytes());
         header.extend_from_slice(&44_100u32.to_le_bytes());
