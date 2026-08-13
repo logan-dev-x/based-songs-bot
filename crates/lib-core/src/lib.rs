@@ -2,7 +2,11 @@ use std::fs::File;
 use std::io::{Error, Result, prelude::*};
 use std::path::Path;
 
-fn read_wav<P: AsRef<Path>>(path: P) -> Result<()> {
+struct Wav {
+    sample_rate: u32,
+}
+
+fn read_wav<P: AsRef<Path>>(path: P) -> Result<Wav> {
     let mut file = File::open(path)?;
     let mut header = [0u8; 12];
 
@@ -15,7 +19,14 @@ fn read_wav<P: AsRef<Path>>(path: P) -> Result<()> {
         ));
     }
 
-    Ok(())
+    let mut fmt_header = [0u8; 16];
+    file.read_exact(&mut fmt_header)?;
+    let sample_rate_bytes = fmt_header[12..16].try_into().unwrap();
+    let sample_rate = u32::from_le_bytes(sample_rate_bytes);
+
+    Ok(Wav {
+        sample_rate: sample_rate,
+    })
 }
 
 #[cfg(test)]
@@ -28,7 +39,10 @@ mod tests {
     fn file_exists() {
         let path = "exists.wav";
         let mut file = File::create(path).unwrap();
-        file.write_all(b"RIFFxxxxWAVE").unwrap();
+        let mut header = Vec::new();
+        header.extend_from_slice(b"RIFFxxxxWAVE");
+        header.extend_from_slice(&[0u8; 16]);
+        file.write_all(&header).unwrap();
 
         let res = read_wav(path);
 
@@ -38,7 +52,7 @@ mod tests {
 
     #[test]
     fn file_not_exists() {
-        let res = read_wav("foo.wav");
+        let res = read_wav("not_exists.wav");
         assert!(res.is_err());
     }
 
@@ -46,7 +60,10 @@ mod tests {
     fn valid_wav() {
         let path = "valid.wav";
         let mut file = File::create(path).unwrap();
-        file.write_all(b"RIFFxxxxWAVE").unwrap();
+        let mut header = Vec::new();
+        header.extend_from_slice(b"RIFFxxxxWAVE");
+        header.extend_from_slice(&[0u8; 16]);
+        file.write_all(&header).unwrap();
 
         let res = read_wav(path);
 
@@ -64,5 +81,29 @@ mod tests {
 
         remove_file(path).unwrap();
         assert!(res.is_err());
+    }
+
+    #[test]
+    fn extract_sample_rate() {
+        let path = "sample_rate.wav";
+        let mut file = File::create(path).unwrap();
+        let mut header = Vec::new();
+        header.extend_from_slice(b"RIFF");
+        header.extend_from_slice(&[0u8; 4]);
+        header.extend_from_slice(b"WAVE");
+
+        header.extend_from_slice(b"fmt ");
+        header.extend_from_slice(&[0u8; 4]);
+        header.extend_from_slice(&[0u8; 2]);
+        header.extend_from_slice(&[0u8; 2]);
+        header.extend_from_slice(&44_100u32.to_le_bytes());
+
+        file.write_all(&header).unwrap();
+        file.sync_all().unwrap();
+
+        let wav = read_wav(path).unwrap();
+
+        assert_eq!(wav.sample_rate, 44100);
+        remove_file(path).unwrap();
     }
 }
