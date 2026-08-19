@@ -79,6 +79,19 @@ fn read_chunk(file: &mut File) -> Result<Chunk> {
     Ok(Chunk { id, data })
 }
 
+fn decode_samples(data: &Vec<u8>, bits_per_sample: u8) -> Result<Vec<i16>> {
+    if bits_per_sample != 16 {
+        return Err(Error::new(InvalidData, "Only 16-bit PCM is supported"));
+    }
+
+    let mut samples = Vec::new();
+    for chunk in data.chunks_exact(2) {
+        samples.push(i16::from_le_bytes([chunk[0], chunk[1]]));
+    }
+
+    Ok(samples)
+}
+
 #[cfg(test)]
 mod tests {
     use std::fs::{OpenOptions, remove_file};
@@ -361,5 +374,13 @@ mod tests {
 
         teardown(ctx.path);
         assert!(res.is_err());
+    }
+    #[test]
+    fn decode_16bit_samples() {
+        let data = vec![0x00, 0x00, 0xFF, 0x00, 0x00, 0x01];
+
+        let samples = decode_samples(&data, 16).unwrap();
+
+        assert_eq!(samples, vec![0, 255, 256]);
     }
 }
