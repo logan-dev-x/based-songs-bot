@@ -1,4 +1,5 @@
 use std::fs::File;
+use std::io::ErrorKind::InvalidData;
 use std::io::{Error, Result, prelude::*};
 use std::path::Path;
 
@@ -40,6 +41,10 @@ fn read_wav<P: AsRef<Path>>(path: P) -> Result<Wav> {
         }
 
         if chunk.id == *b"fmt " {
+            if chunk.data.len() < 16 {
+                return Err(Error::new(InvalidData, "Invalid fmt chunk"));
+            }
+
             channels = Some(u16::from_le_bytes(chunk.data[2..4].try_into().unwrap()));
             sample_rate = Some(u32::from_le_bytes(chunk.data[4..8].try_into().unwrap()));
             bits_per_sample = Some(u16::from_le_bytes(chunk.data[14..16].try_into().unwrap()));
@@ -294,5 +299,19 @@ mod tests {
 
         teardown(ctx.path);
         assert_eq!(wav.data, vec![1, 2, 3, 4]);
+    }
+    #[test]
+    fn invalid_fmt_chunk() {
+        let mut header = Vec::new();
+        write_wav_header(&mut header);
+        header.extend_from_slice(b"fmt ");
+        header.extend_from_slice(&4u32.to_le_bytes());
+        header.extend_from_slice(&[0u8; 4]);
+        let ctx: TestContext = setup(&mut header);
+
+        let res = read_wav(&ctx.path);
+
+        teardown(ctx.path);
+        assert!(res.is_err());
     }
 }
