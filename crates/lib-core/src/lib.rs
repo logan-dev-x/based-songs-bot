@@ -314,4 +314,27 @@ mod tests {
         teardown(ctx.path);
         assert!(res.is_err());
     }
+    #[test]
+    fn find_fmt_after_data() {
+        let mut header = Vec::new();
+        write_wav_header(&mut header);
+        write_data_chunk(&mut header);
+        header.extend_from_slice(b"fmt ");
+        header.extend_from_slice(&16u32.to_le_bytes());
+        header.extend_from_slice(&[0u8; 2]);
+        header.extend_from_slice(&2u16.to_le_bytes());
+        header.extend_from_slice(&44_100u32.to_le_bytes());
+        header.extend_from_slice(&[0u8; 4]);
+        header.extend_from_slice(&[0u8; 2]);
+        header.extend_from_slice(&16u16.to_le_bytes());
+        let ctx: TestContext = setup(&mut header);
+
+        let wav = read_wav(&ctx.path).unwrap();
+
+        teardown(ctx.path);
+        assert_eq!(wav.sample_rate, 44_100);
+        assert_eq!(wav.channels, 2);
+        assert_eq!(wav.bits_per_sample, 16);
+        assert_eq!(wav.data, vec![1, 2, 3, 4]);
+    }
 }
