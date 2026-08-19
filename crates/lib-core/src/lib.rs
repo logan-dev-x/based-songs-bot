@@ -80,24 +80,84 @@ mod tests {
 
     use super::*;
 
+    fn write_wav_header(header: &mut Vec<u8>) {
+        header.extend_from_slice(
+            &[
+                [b'R', b'I', b'F', b'F'].as_slice(),
+                &[0u8; 4],
+                [b'W', b'A', b'V', b'E'].as_slice(),
+            ]
+            .concat(),
+        );
+    }
+
+    fn write_data_chunk(header: &mut Vec<u8>) {
+        header.extend_from_slice(
+            &[
+                [b'd', b'a', b't', b'a'].as_slice(),
+                &4u32.to_le_bytes(),
+                &[1, 2, 3, 4],
+            ]
+            .concat(),
+        );
+    }
+
+    fn write_junk_chunk(header: &mut Vec<u8>) {
+        header.extend_from_slice(
+            &[
+                [b'J', b'U', b'N', b'K'].as_slice(),
+                &4u32.to_le_bytes(),
+                &[1, 2, 3, 4],
+            ]
+            .concat(),
+        );
+    }
+
+    fn write_fmt_chunk(header: &mut Vec<u8>) {
+        header.extend_from_slice(
+            &[
+                [b'f', b'm', b't', b' '].as_slice(),
+                &16u32.to_le_bytes(),
+                &[0u8; 16],
+            ]
+            .concat(),
+        );
+    }
+
+    struct TestContext {
+        path: String,
+        file: File,
+    }
+
+    fn setup(header: &mut Vec<u8>) -> TestContext {
+        let path = format!("{}.wav", rand::random_range(0..1000));
+        let mut file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(&path)
+            .unwrap();
+        file.write_all(header).unwrap();
+        file.seek(std::io::SeekFrom::Start(0)).unwrap();
+
+        TestContext { path, file }
+    }
+
+    fn teardown(path: String) {
+        remove_file(path).unwrap();
+    }
+
     #[test]
     fn file_exists() {
-        let path = "exists.wav";
-        let mut file = File::create(path).unwrap();
         let mut header = Vec::new();
-        header.extend_from_slice(b"RIFFxxxxWAVE");
-        header.extend_from_slice(b"fmt ");
-        header.extend_from_slice(&16u32.to_le_bytes());
-        header.extend_from_slice(&[0u8; 16]);
-        header.extend_from_slice(b"data");
-        header.extend_from_slice(&4u32.to_le_bytes());
-        header.extend_from_slice(&[1, 2, 3, 4]);
+        write_wav_header(&mut header);
+        write_fmt_chunk(&mut header);
+        write_data_chunk(&mut header);
+        let ctx: TestContext = setup(&mut header);
 
-        file.write_all(&header).unwrap();
+        let res = read_wav(&ctx.path);
 
-        let res = read_wav(path);
-
-        remove_file(path).unwrap();
+        teardown(ctx.path);
         assert!(res.is_ok());
     }
 
@@ -109,230 +169,130 @@ mod tests {
 
     #[test]
     fn valid_wav() {
-        let path = "valid.wav";
-        let mut file = File::create(path).unwrap();
         let mut header = Vec::new();
-        header.extend_from_slice(b"RIFFxxxxWAVE");
-        header.extend_from_slice(b"fmt ");
-        header.extend_from_slice(&16u32.to_le_bytes());
-        header.extend_from_slice(&[0u8; 16]);
-        header.extend_from_slice(b"data");
-        header.extend_from_slice(&4u32.to_le_bytes());
-        header.extend_from_slice(&[1, 2, 3, 4]);
-        file.write_all(&header).unwrap();
+        write_wav_header(&mut header);
+        write_fmt_chunk(&mut header);
+        write_data_chunk(&mut header);
+        let ctx: TestContext = setup(&mut header);
 
-        let res = read_wav(path);
+        let res = read_wav(&ctx.path);
 
-        remove_file(path).unwrap();
+        teardown(ctx.path);
         assert!(res.is_ok());
     }
 
     #[test]
     fn invalid_wav() {
-        let path = "invalid.wav";
-        let mut file = File::create(path).unwrap();
-        file.write_all(b"xxxxxxxxxxxx").unwrap();
+        let mut header = Vec::new();
+        header.extend_from_slice(&[0u8; 12]);
+        let ctx: TestContext = setup(&mut header);
 
-        let res = read_wav(path);
+        let res = read_wav(&ctx.path);
 
-        remove_file(path).unwrap();
+        teardown(ctx.path);
         assert!(res.is_err());
     }
 
     #[test]
     fn extract_sample_rate() {
-        let path = "sample_rate.wav";
-        let mut file = File::create(path).unwrap();
         let mut header = Vec::new();
-        header.extend_from_slice(b"RIFF");
-        header.extend_from_slice(&[0u8; 4]);
-        header.extend_from_slice(b"WAVE");
-
+        write_wav_header(&mut header);
+        write_data_chunk(&mut header);
         header.extend_from_slice(b"fmt ");
         header.extend_from_slice(&16u32.to_le_bytes());
-        header.extend_from_slice(&[0u8; 2]);
-        header.extend_from_slice(&[0u8; 2]);
-        header.extend_from_slice(&44_100u32.to_le_bytes());
         header.extend_from_slice(&[0u8; 4]);
-        header.extend_from_slice(&[0u8; 2]);
-        header.extend_from_slice(&[0u8; 2]);
+        header.extend_from_slice(&44_100u32.to_le_bytes());
+        header.extend_from_slice(&[0u8; 8]);
+        let ctx: TestContext = setup(&mut header);
 
-        header.extend_from_slice(b"data");
-        header.extend_from_slice(&4u32.to_le_bytes());
-        header.extend_from_slice(&[1, 2, 3, 4]);
+        let wav = read_wav(&ctx.path).unwrap();
 
-        file.write_all(&header).unwrap();
-        file.sync_all().unwrap();
-
-        let wav = read_wav(path).unwrap();
-
+        teardown(ctx.path);
         assert_eq!(wav.sample_rate, 44100);
-        remove_file(path).unwrap();
     }
 
     #[test]
     fn wav_channels() {
-        let path = "channels.wav";
-        let mut file = File::create(path).unwrap();
         let mut header = Vec::new();
-        header.extend_from_slice(b"RIFF");
-        header.extend_from_slice(&[0u8; 4]);
-        header.extend_from_slice(b"WAVE");
-
+        write_wav_header(&mut header);
+        write_data_chunk(&mut header);
         header.extend_from_slice(b"fmt ");
         header.extend_from_slice(&16u32.to_le_bytes());
         header.extend_from_slice(&[0u8; 2]);
         header.extend_from_slice(&2u16.to_le_bytes());
-        header.extend_from_slice(&44_100u32.to_le_bytes());
-        header.extend_from_slice(&[0u8; 4]);
-        header.extend_from_slice(&[0u8; 2]);
-        header.extend_from_slice(&[0u8; 2]);
+        header.extend_from_slice(&[0u8; 12]);
+        let ctx: TestContext = setup(&mut header);
 
-        header.extend_from_slice(b"data");
-        header.extend_from_slice(&4u32.to_le_bytes());
-        header.extend_from_slice(&[1, 2, 3, 4]);
+        let wav = read_wav(&ctx.path).unwrap();
 
-        file.write_all(&header).unwrap();
-
-        let wav = read_wav(path).unwrap();
-
+        teardown(ctx.path);
         assert_eq!(wav.channels, 2);
-        remove_file(path).unwrap();
     }
 
     #[test]
     fn wav_bits_per_sample() {
-        let path = "bits_per_sample.wav";
-        let mut file = File::create(path).unwrap();
         let mut header = Vec::new();
-        header.extend_from_slice(b"RIFF");
-        header.extend_from_slice(&[0u8; 4]);
-        header.extend_from_slice(b"WAVE");
-
+        write_wav_header(&mut header);
+        write_data_chunk(&mut header);
         header.extend_from_slice(b"fmt ");
         header.extend_from_slice(&16u32.to_le_bytes());
-        header.extend_from_slice(&[0u8; 2]);
-        header.extend_from_slice(&2u16.to_le_bytes());
-        header.extend_from_slice(&44_100u32.to_le_bytes());
-        header.extend_from_slice(&[0u8; 4]);
-        header.extend_from_slice(&[0u8; 2]);
+        header.extend_from_slice(&[0u8; 14]);
         header.extend_from_slice(&16u16.to_le_bytes());
-        header.extend_from_slice(b"data");
-        header.extend_from_slice(&4u32.to_le_bytes());
-        header.extend_from_slice(&[1, 2, 3, 4]);
+        let ctx: TestContext = setup(&mut header);
 
-        file.write_all(&header).unwrap();
+        let wav = read_wav(&ctx.path).unwrap();
 
-        let wav = read_wav(path).unwrap();
-
+        teardown(ctx.path);
         assert_eq!(wav.bits_per_sample, 16);
-        remove_file(path).unwrap();
     }
 
     #[test]
     fn read_chunk_fmt() {
-        let path = "chunk.wav";
-        let mut file = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .open(path)
-            .unwrap();
         let mut header = Vec::new();
         header.extend_from_slice(b"fmt ");
         header.extend_from_slice(&4u32.to_le_bytes());
         header.extend_from_slice(&[1, 2, 3, 4]);
-        header.extend_from_slice(b"data");
-        header.extend_from_slice(&4u32.to_le_bytes());
-        header.extend_from_slice(&[1, 2, 3, 4]);
+        write_data_chunk(&mut header);
+        let mut ctx: TestContext = setup(&mut header);
 
-        file.write_all(&header).unwrap();
-        file.seek(std::io::SeekFrom::Start(0)).unwrap();
+        let chunk = read_chunk(&mut ctx.file).unwrap();
 
-        let chunk = read_chunk(&mut file).unwrap();
-
+        teardown(ctx.path);
         assert_eq!(chunk.id, *b"fmt ");
         assert_eq!(chunk.data, vec![1, 2, 3, 4]);
-
-        remove_file(path).unwrap();
     }
 
     #[test]
     fn find_fmt_after_junk() {
-        let path = "fmt_and_junk.wav";
-        let mut file = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .open(path)
-            .unwrap();
         let mut header = Vec::new();
-        header.extend_from_slice(b"RIFF");
-        header.extend_from_slice(&[0u8; 4]);
-        header.extend_from_slice(b"WAVE");
-
-        header.extend_from_slice(b"JUNK");
-        header.extend_from_slice(&4u32.to_le_bytes());
-        header.extend_from_slice(&[1, 2, 3, 4]);
-
+        write_wav_header(&mut header);
+        write_junk_chunk(&mut header);
         header.extend_from_slice(b"fmt ");
         header.extend_from_slice(&16u32.to_le_bytes());
-        header.extend_from_slice(&[0u8; 2]);
-        header.extend_from_slice(&2u16.to_le_bytes());
-        header.extend_from_slice(&44_100u32.to_le_bytes());
         header.extend_from_slice(&[0u8; 4]);
-        header.extend_from_slice(&[0u8; 2]);
-        header.extend_from_slice(&16u16.to_le_bytes());
+        header.extend_from_slice(&44_100u32.to_le_bytes());
+        header.extend_from_slice(&[0u8; 8]);
+        write_data_chunk(&mut header);
+        let ctx: TestContext = setup(&mut header);
 
-        header.extend_from_slice(b"data");
-        header.extend_from_slice(&4u32.to_le_bytes());
-        header.extend_from_slice(&[1, 2, 3, 4]);
+        let wav = read_wav(&ctx.path).unwrap();
 
-        file.write_all(&header).unwrap();
-        file.seek(std::io::SeekFrom::Start(0)).unwrap();
-
-        let wav = read_wav(path).unwrap();
-
+        teardown(ctx.path);
         assert_eq!(wav.sample_rate, 44100);
-
-        remove_file(path).unwrap();
     }
 
     #[test]
     fn extract_data() {
-        let path = "wav_with_data.wav";
-        let mut file = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .open(path)
-            .unwrap();
         let mut header = Vec::new();
-        header.extend_from_slice(b"RIFF");
-        header.extend_from_slice(&[0u8; 4]);
-        header.extend_from_slice(b"WAVE");
-        header.extend_from_slice(b"JUNK");
-        header.extend_from_slice(&4u32.to_le_bytes());
-        header.extend_from_slice(&[1, 2, 3, 4]);
-        header.extend_from_slice(b"fmt ");
-        header.extend_from_slice(&16u32.to_le_bytes());
-        header.extend_from_slice(&[0u8; 2]);
-        header.extend_from_slice(&2u16.to_le_bytes());
-        header.extend_from_slice(&44_100u32.to_le_bytes());
-        header.extend_from_slice(&[0u8; 4]);
-        header.extend_from_slice(&[0u8; 2]);
-        header.extend_from_slice(&16u16.to_le_bytes());
+        write_wav_header(&mut header);
+        write_junk_chunk(&mut header);
+        write_fmt_chunk(&mut header);
+        write_data_chunk(&mut header);
+        let ctx: TestContext = setup(&mut header);
 
-        header.extend_from_slice(b"data");
-        header.extend_from_slice(&4u32.to_le_bytes());
-        header.extend_from_slice(&[1, 2, 3, 4]);
+        let wav = read_wav(&ctx.path).unwrap();
 
-        file.write_all(&header).unwrap();
-        file.seek(std::io::SeekFrom::Start(0)).unwrap();
-
-        let wav = read_wav(path).unwrap();
-
+        teardown(ctx.path);
         assert_eq!(wav.data, vec![1, 2, 3, 4]);
-        remove_file(path).unwrap();
     }
 }
