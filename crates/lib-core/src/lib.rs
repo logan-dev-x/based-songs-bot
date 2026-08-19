@@ -79,7 +79,7 @@ fn read_chunk(file: &mut File) -> Result<Chunk> {
     Ok(Chunk { id, data })
 }
 
-fn decode_samples(data: &Vec<u8>, bits_per_sample: u8) -> Result<Vec<i16>> {
+fn decode_samples(data: &Vec<u8>, bits_per_sample: u16) -> Result<Vec<i16>> {
     if bits_per_sample != 16 {
         return Err(Error::new(InvalidData, "Only 16-bit PCM is supported"));
     }
@@ -375,12 +375,38 @@ mod tests {
         teardown(ctx.path);
         assert!(res.is_err());
     }
+
     #[test]
     fn decode_16bit_samples() {
         let data = vec![0x00, 0x00, 0xFF, 0x00, 0x00, 0x01];
 
         let samples = decode_samples(&data, 16).unwrap();
 
+        assert_eq!(samples, vec![0, 255, 256]);
+    }
+
+    #[test]
+    fn decode_wav_data() {
+        let mut header = Vec::new();
+        write_wav_header(&mut header);
+        header.extend_from_slice(b"fmt ");
+        header.extend_from_slice(&16u32.to_le_bytes());
+        header.extend_from_slice(&1u16.to_le_bytes());
+        header.extend_from_slice(&1u16.to_le_bytes());
+        header.extend_from_slice(&44_100u32.to_le_bytes());
+        header.extend_from_slice(&88_200u32.to_le_bytes());
+        header.extend_from_slice(&2u16.to_le_bytes());
+        header.extend_from_slice(&16u16.to_le_bytes());
+
+        header.extend_from_slice(b"data");
+        header.extend_from_slice(&6u32.to_le_bytes());
+        header.extend_from_slice(&[0x00, 0x00, 0xFF, 0x00, 0x00, 0x01]);
+        let ctx: TestContext = setup(&mut header);
+        let wav = read_wav(&ctx.path).unwrap();
+
+        let samples = decode_samples(&wav.data, wav.bits_per_sample).unwrap();
+
+        teardown(ctx.path);
         assert_eq!(samples, vec![0, 255, 256]);
     }
 }
