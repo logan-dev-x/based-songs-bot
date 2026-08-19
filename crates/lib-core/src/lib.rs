@@ -337,4 +337,16 @@ mod tests {
         assert_eq!(wav.bits_per_sample, 16);
         assert_eq!(wav.data, vec![1, 2, 3, 4]);
     }
+    #[test]
+    fn wav_without_fmt() {
+        let mut header = Vec::new();
+        write_wav_header(&mut header);
+        write_data_chunk(&mut header);
+        let ctx: TestContext = setup(&mut header);
+
+        let res = read_wav(&ctx.path);
+
+        teardown(ctx.path);
+        assert!(res.is_err());
+    }
 }
