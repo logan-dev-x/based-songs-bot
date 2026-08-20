@@ -511,4 +511,14 @@ mod tests {
             ]
         );
     }
+
+    #[test]
+    fn samples_round_trip() {
+        let original = vec![0x00, 0x00, 0xFF, 0x00, 0x00, 0x01, 0xFF, 0xFF];
+
+        let samples = decode_samples(&original, 16).unwrap();
+        let encoded = encode_samples(&samples, 16).unwrap();
+
+        assert_eq!(encoded, original);
+    }
 }
