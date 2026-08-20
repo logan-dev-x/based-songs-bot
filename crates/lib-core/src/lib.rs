@@ -474,4 +474,13 @@ mod tests {
         teardown(ctx.path);
         assert!(res.is_err());
     }
+
+    #[test]
+    fn decode_stereo_samples() {
+        let data = vec![0x64, 0x00, 0xF4, 0x01, 0xC8, 0x00, 0x58, 0x02];
+
+        let samples = decode_samples(&data, 16).unwrap();
+
+        assert_eq!(samples, vec![100, 500, 200, 600]);
+    }
 }
