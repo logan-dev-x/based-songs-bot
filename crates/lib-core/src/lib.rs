@@ -100,6 +100,17 @@ fn decode_samples(data: &Vec<u8>, bits_per_sample: u16) -> Result<Vec<i16>> {
     Ok(samples)
 }
 
+fn encode_samples(samples: &Vec<i16>, bits_per_sample: u16) -> Result<Vec<u8>> {
+    if bits_per_sample != 16 {
+        return Err(Error::new(InvalidData, "Only 16-bit PCM is supported"));
+    }
+    let mut data = Vec::with_capacity(samples.len() * 2);
+    for sample in samples {
+        data.extend_from_slice(&sample.to_le_bytes());
+    }
+    Ok(data)
+}
+
 #[cfg(test)]
 mod tests {
     use std::fs::{OpenOptions, remove_file};
@@ -482,5 +493,22 @@ mod tests {
         let samples = decode_samples(&data, 16).unwrap();
 
         assert_eq!(samples, vec![100, 500, 200, 600]);
+    }
+
+    #[test]
+    fn encode_16bit_samples() {
+        let samples = vec![0i16, 255i16, 256i16, -1i16];
+
+        let data = encode_samples(&samples, 16).unwrap();
+
+        assert_eq!(
+            data,
+            vec![
+                0x00, 0x00, // 0
+                0xFF, 0x00, // 255
+                0x00, 0x01, // 256
+                0xFF, 0xFF, // -1
+            ]
+        );
     }
 }
