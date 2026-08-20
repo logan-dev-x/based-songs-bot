@@ -49,9 +49,13 @@ fn read_wav<P: AsRef<Path>>(path: P) -> Result<Wav> {
                 return Err(Error::new(InvalidData, "Only PCM WAV is supported"));
             }
 
+            bits_per_sample = Some(u16::from_le_bytes(chunk.data[14..16].try_into().unwrap()));
+            if bits_per_sample.unwrap() != 16 {
+                return Err(Error::new(InvalidData, "Only 16-bit is supported"));
+            }
+
             channels = Some(u16::from_le_bytes(chunk.data[2..4].try_into().unwrap()));
             sample_rate = Some(u32::from_le_bytes(chunk.data[4..8].try_into().unwrap()));
-            bits_per_sample = Some(u16::from_le_bytes(chunk.data[14..16].try_into().unwrap()));
         }
 
         if data.is_some()
@@ -141,7 +145,8 @@ mod tests {
                 [b'f', b'm', b't', b' '].as_slice(),
                 &16u32.to_le_bytes(),
                 &1u16.to_le_bytes(),
-                &[0u8; 14],
+                &[0u8; 12],
+                &16u16.to_le_bytes(),
             ]
             .concat(),
         );
@@ -226,7 +231,8 @@ mod tests {
         header.extend_from_slice(&1u16.to_le_bytes());
         header.extend_from_slice(&[0u8; 2]);
         header.extend_from_slice(&44_100u32.to_le_bytes());
-        header.extend_from_slice(&[0u8; 8]);
+        header.extend_from_slice(&[0u8; 6]);
+        header.extend_from_slice(&16u16.to_le_bytes());
         let ctx: TestContext = setup(&mut header);
 
         let wav = read_wav(&ctx.path).unwrap();
@@ -244,7 +250,8 @@ mod tests {
         header.extend_from_slice(&16u32.to_le_bytes());
         header.extend_from_slice(&1u16.to_le_bytes());
         header.extend_from_slice(&2u16.to_le_bytes());
-        header.extend_from_slice(&[0u8; 12]);
+        header.extend_from_slice(&[0u8; 10]);
+        header.extend_from_slice(&16u16.to_le_bytes());
         let ctx: TestContext = setup(&mut header);
 
         let wav = read_wav(&ctx.path).unwrap();
@@ -297,7 +304,8 @@ mod tests {
         header.extend_from_slice(&1u16.to_le_bytes());
         header.extend_from_slice(&[0u8; 2]);
         header.extend_from_slice(&44_100u32.to_le_bytes());
-        header.extend_from_slice(&[0u8; 8]);
+        header.extend_from_slice(&[0u8; 6]);
+        header.extend_from_slice(&16u16.to_le_bytes());
         write_data_chunk(&mut header);
         let ctx: TestContext = setup(&mut header);
 
@@ -434,6 +442,30 @@ mod tests {
         header.extend_from_slice(&2u16.to_le_bytes());
         header.extend_from_slice(&16u16.to_le_bytes());
 
+        write_data_chunk(&mut header);
+        let ctx = setup(&mut header);
+
+        let res = read_wav(&ctx.path);
+
+        teardown(ctx.path);
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn reject_non_16bit_pcm() {
+        let mut header = Vec::new();
+        write_wav_header(&mut header);
+        header.extend_from_slice(b"fmt ");
+        header.extend_from_slice(&16u32.to_le_bytes());
+        // PCM
+        header.extend_from_slice(&1u16.to_le_bytes());
+        // Mono
+        header.extend_from_slice(&1u16.to_le_bytes());
+        header.extend_from_slice(&44_100u32.to_le_bytes());
+        header.extend_from_slice(&88_200u32.to_le_bytes());
+        header.extend_from_slice(&2u16.to_le_bytes());
+        // 24-bit
+        header.extend_from_slice(&24u16.to_le_bytes());
         write_data_chunk(&mut header);
         let ctx = setup(&mut header);
 
