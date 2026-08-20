@@ -45,6 +45,10 @@ fn read_wav<P: AsRef<Path>>(path: P) -> Result<Wav> {
                 return Err(Error::new(InvalidData, "Invalid fmt chunk"));
             }
 
+            if u16::from_le_bytes(chunk.data[0..2].try_into().unwrap()) != 1 {
+                return Err(Error::new(InvalidData, "Only PCM WAV is supported"));
+            }
+
             channels = Some(u16::from_le_bytes(chunk.data[2..4].try_into().unwrap()));
             sample_rate = Some(u32::from_le_bytes(chunk.data[4..8].try_into().unwrap()));
             bits_per_sample = Some(u16::from_le_bytes(chunk.data[14..16].try_into().unwrap()));
@@ -136,7 +140,8 @@ mod tests {
             &[
                 [b'f', b'm', b't', b' '].as_slice(),
                 &16u32.to_le_bytes(),
-                &[0u8; 16],
+                &1u16.to_le_bytes(),
+                &[0u8; 14],
             ]
             .concat(),
         );
@@ -218,7 +223,8 @@ mod tests {
         write_data_chunk(&mut header);
         header.extend_from_slice(b"fmt ");
         header.extend_from_slice(&16u32.to_le_bytes());
-        header.extend_from_slice(&[0u8; 4]);
+        header.extend_from_slice(&1u16.to_le_bytes());
+        header.extend_from_slice(&[0u8; 2]);
         header.extend_from_slice(&44_100u32.to_le_bytes());
         header.extend_from_slice(&[0u8; 8]);
         let ctx: TestContext = setup(&mut header);
@@ -236,7 +242,7 @@ mod tests {
         write_data_chunk(&mut header);
         header.extend_from_slice(b"fmt ");
         header.extend_from_slice(&16u32.to_le_bytes());
-        header.extend_from_slice(&[0u8; 2]);
+        header.extend_from_slice(&1u16.to_le_bytes());
         header.extend_from_slice(&2u16.to_le_bytes());
         header.extend_from_slice(&[0u8; 12]);
         let ctx: TestContext = setup(&mut header);
@@ -254,7 +260,8 @@ mod tests {
         write_data_chunk(&mut header);
         header.extend_from_slice(b"fmt ");
         header.extend_from_slice(&16u32.to_le_bytes());
-        header.extend_from_slice(&[0u8; 14]);
+        header.extend_from_slice(&1u16.to_le_bytes());
+        header.extend_from_slice(&[0u8; 12]);
         header.extend_from_slice(&16u16.to_le_bytes());
         let ctx: TestContext = setup(&mut header);
 
@@ -287,7 +294,8 @@ mod tests {
         write_junk_chunk(&mut header);
         header.extend_from_slice(b"fmt ");
         header.extend_from_slice(&16u32.to_le_bytes());
-        header.extend_from_slice(&[0u8; 4]);
+        header.extend_from_slice(&1u16.to_le_bytes());
+        header.extend_from_slice(&[0u8; 2]);
         header.extend_from_slice(&44_100u32.to_le_bytes());
         header.extend_from_slice(&[0u8; 8]);
         write_data_chunk(&mut header);
@@ -334,7 +342,7 @@ mod tests {
         write_data_chunk(&mut header);
         header.extend_from_slice(b"fmt ");
         header.extend_from_slice(&16u32.to_le_bytes());
-        header.extend_from_slice(&[0u8; 2]);
+        header.extend_from_slice(&1u16.to_le_bytes());
         header.extend_from_slice(&2u16.to_le_bytes());
         header.extend_from_slice(&44_100u32.to_le_bytes());
         header.extend_from_slice(&[0u8; 4]);
@@ -408,5 +416,30 @@ mod tests {
 
         teardown(ctx.path);
         assert_eq!(samples, vec![0, 255, 256]);
+    }
+
+    #[test]
+    fn reject_non_pcm() {
+        let mut header = Vec::new();
+        write_wav_header(&mut header);
+        header.extend_from_slice(b"fmt ");
+        header.extend_from_slice(&16u32.to_le_bytes());
+
+        // AudioFormat = 3 (IEEE float)
+        header.extend_from_slice(&3u16.to_le_bytes());
+
+        header.extend_from_slice(&1u16.to_le_bytes());
+        header.extend_from_slice(&44_100u32.to_le_bytes());
+        header.extend_from_slice(&88_200u32.to_le_bytes());
+        header.extend_from_slice(&2u16.to_le_bytes());
+        header.extend_from_slice(&16u16.to_le_bytes());
+
+        write_data_chunk(&mut header);
+        let ctx = setup(&mut header);
+
+        let res = read_wav(&ctx.path);
+
+        teardown(ctx.path);
+        assert!(res.is_err());
     }
 }
