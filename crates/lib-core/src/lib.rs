@@ -87,6 +87,10 @@ fn read_chunk(file: &mut File) -> Result<Chunk> {
     Ok(Chunk { id, data })
 }
 
+fn pitch_ratio(from: f32, to: f32) -> f32 {
+    to / from
+}
+
 fn decode_samples(data: &Vec<u8>, bits_per_sample: u16) -> Result<Vec<i16>> {
     if bits_per_sample != 16 {
         return Err(Error::new(InvalidData, "Only 16-bit PCM is supported"));
@@ -520,5 +524,12 @@ mod tests {
         let encoded = encode_samples(&samples, 16).unwrap();
 
         assert_eq!(encoded, original);
+    }
+
+    #[test]
+    fn pitch_ratio_test() {
+        let ratio = pitch_ratio(440.0, 432.0);
+
+        assert!((ratio - 0.981818).abs() < 0.000001);
     }
 }
