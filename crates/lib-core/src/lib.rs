@@ -4,5 +4,7 @@ use std::io::{Error, Result, Seek};
 
 pub mod pitch;
 pub mod samples;
-pub mod test_helpers;
 pub mod wav;
+
+#[cfg(test)]
+mod test_helpers;

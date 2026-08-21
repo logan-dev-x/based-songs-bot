@@ -105,4 +105,16 @@ mod tests {
 
         assert_eq!(encoded, original);
     }
+
+    #[test]
+    fn decode_negative_samples() {
+        let data = vec![
+            0xFF, 0xFF, // -1
+            0x18, 0xFC, // -1000
+        ];
+
+        let samples = decode_samples(&data, 16).unwrap();
+
+        assert_eq!(samples, vec![-1, -1000]);
+    }
 }
