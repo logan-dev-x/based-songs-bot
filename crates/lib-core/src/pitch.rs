@@ -14,7 +14,10 @@ pub fn resample(samples: &[i16], ratio: f32) -> Vec<i16> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_helpers::*;
+    use crate::{
+        samples::{decode_samples, encode_samples},
+        test_helpers::*,
+    };
 
     #[test]
     fn pitch_ratio_test() {
@@ -47,5 +50,16 @@ mod tests {
         let result = resample(&samples, 2.0);
 
         assert_eq!(result.len(), 8);
+    }
+    #[test]
+    fn convert_samples_440_to_432() {
+        let original = vec![0, 1000, 2000, 3000, 4000, 5000, 6000, 7000];
+
+        let samples = decode_samples(&encode_samples(&original, 16).unwrap(), 16).unwrap();
+
+        let ratio = pitch_ratio(440.0, 432.0);
+        let resampled = resample(&samples, ratio);
+
+        assert_eq!(resampled.len(), 7);
     }
 }
