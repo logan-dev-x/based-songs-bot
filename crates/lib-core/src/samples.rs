@@ -9,6 +9,12 @@ pub fn decode_samples(data: &Vec<u8>, bits_per_sample: u16) -> Result<Vec<i16>> 
     }
 
     let mut samples = Vec::new();
+    if data.len() % 2 != 0 {
+        return Err(Error::new(
+            ErrorKind::InvalidData,
+            "Invalid 16-bit PCM data",
+        ));
+    }
     for chunk in data.chunks_exact(2) {
         samples.push(i16::from_le_bytes([chunk[0], chunk[1]]));
     }
@@ -116,5 +122,14 @@ mod tests {
         let samples = decode_samples(&data, 16).unwrap();
 
         assert_eq!(samples, vec![-1, -1000]);
+    }
+
+    #[test]
+    fn decode_16bit_odd_bytes() {
+        let data = vec![0x00];
+
+        let result = decode_samples(&data, 16);
+
+        assert!(result.is_err());
     }
 }
