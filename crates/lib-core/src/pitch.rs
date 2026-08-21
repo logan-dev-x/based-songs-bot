@@ -31,4 +31,21 @@ mod tests {
 
         assert_eq!(result, vec![0, 200]);
     }
+    #[test]
+    fn resample_half() {
+        let samples = vec![0, 1, 2, 3, 4, 5, 6, 7];
+
+        let result = resample(&samples, 0.5);
+
+        assert_eq!(result.len(), 4);
+    }
+
+    #[test]
+    fn resample_double() {
+        let samples = vec![0, 1, 2, 3];
+
+        let result = resample(&samples, 2.0);
+
+        assert_eq!(result.len(), 8);
+    }
 }
