@@ -132,4 +132,12 @@ mod tests {
 
         assert!(result.is_err());
     }
+    #[test]
+    fn decode_non_16bit() {
+        let data = vec![0x00, 0x00];
+
+        let result = decode_samples(&data, 24);
+
+        assert!(result.is_err());
+    }
 }
