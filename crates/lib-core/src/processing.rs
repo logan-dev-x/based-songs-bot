@@ -40,4 +40,24 @@ mod tests {
         assert_eq!(result.bits_per_sample, 16);
         assert!(result.data.len() < wav.data.len());
     }
+    #[test]
+    fn change_stereo_wav_pitch() {
+        let samples = vec![
+            100, 200, // L R
+            300, 400, // L R
+            500, 600, // L R
+            700, 800, // L R
+        ];
+
+        let wav = Wav {
+            sample_rate: 44_100,
+            channels: 2,
+            bits_per_sample: 16,
+            data: encode_samples(&samples, 16).unwrap(),
+        };
+
+        let result = change_pitch(&wav, 440.0, 432.0).unwrap();
+
+        assert_eq!(result.channels, 2);
+    }
 }
