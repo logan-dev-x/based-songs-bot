@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{Error, ErrorKind, Read, Result};
+use std::io::{Error, ErrorKind, Read, Result, Write};
 use std::path::Path;
 
 pub struct Wav {
@@ -12,6 +12,19 @@ pub struct Wav {
 pub struct Chunk {
     id: [u8; 4],
     data: Vec<u8>,
+}
+
+pub fn write_wav<P: AsRef<Path>>(wav: &Wav, path: P) -> Result<()> {
+    let mut file = File::create(path)?;
+    let mut header = Vec::new();
+
+    header.extend_from_slice(b"RIFF");
+    header.extend_from_slice(&0u32.to_le_bytes());
+    header.extend_from_slice(b"WAVE");
+
+    file.write_all(&header);
+
+    Ok(())
 }
 
 pub fn read_wav<P: AsRef<Path>>(path: P) -> Result<Wav> {
@@ -359,5 +372,26 @@ mod tests {
 
         teardown(ctx.path);
         assert!(res.is_err());
+    }
+    #[test]
+    fn write_wav_creates_valid_header() {
+        let wav = Wav {
+            sample_rate: 44_100,
+            channels: 1,
+            bits_per_sample: 16,
+            data: vec![1, 2, 3, 4],
+        };
+
+        let path = "output.wav";
+
+        write_wav(&wav, path).unwrap();
+
+        let mut file = File::open(path).unwrap();
+        let mut header = [0u8; 12];
+        file.read_exact(&mut header).unwrap();
+
+        teardown(path.to_string());
+        assert_eq!(&header[0..4], b"RIFF");
+        assert_eq!(&header[8..12], b"WAVE");
     }
 }
