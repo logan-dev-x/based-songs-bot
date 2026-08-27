@@ -4,6 +4,8 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 
+pub mod error;
+
 /// Lê o arquivo MP3 e retorna: (Amostras de Áudio, Sample Rate, Quantidade de Canais)
 fn decode<P: AsRef<Path> + std::fmt::Display>(path: P) -> (Vec<i16>, u32, u8) {
     let err_msg = &format_args!("Erro: Arquivo {} não encontrado", path).to_string();
