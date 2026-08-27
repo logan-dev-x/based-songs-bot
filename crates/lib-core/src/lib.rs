@@ -4,37 +4,6 @@ pub mod encode;
 pub mod error;
 pub mod pitch;
 
-use decode::decode;
-use encode::encode;
-use error::Error;
-use pitch::pitch;
-
-use std::fmt::Display;
-use std::path::Path;
-
-pub fn pitch_shift<P: AsRef<Path> + Display>(
-    input_path: P,
-    output_path: P,
-    from: f64,
-    to: f64,
-) -> Result<(), Error> {
-    println!("Lendo e decodificando arquivo...");
-
-    let audio = decode(input_path)?;
-
-    println!("Aplicando pitch-shift de {}Hz para {}Hz...", from, to);
-
-    let audio = pitch(&audio, from, to)?;
-
-    println!("Codificando o novo áudio...");
-
-    encode(&audio, output_path)?;
-
-    println!("Concluído com sucesso!");
-
-    Ok(())
-}
-
 #[cfg(test)]
 mod test {
     use crate::audio::Audio;

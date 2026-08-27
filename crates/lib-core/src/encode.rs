@@ -31,9 +31,10 @@ fn create_encoder(channels: u8, sample_rate: u32) -> Result<Encoder, Error> {
 }
 
 fn encode_samples(encoder: &mut Encoder, audio: &Audio) -> Result<Vec<u8>, Error> {
-    let mut output = Vec::new();
+    let mut output = Vec::with_capacity(audio.samples.len());
 
-    let chunk_size = 8192 * audio.channels as usize;
+    let channels = audio.channels as usize;
+    let chunk_size = 8192 * channels;
 
     for chunk in audio.samples.chunks(chunk_size) {
         if audio.channels == 1 {
@@ -41,6 +42,10 @@ fn encode_samples(encoder: &mut Encoder, audio: &Audio) -> Result<Vec<u8>, Error
                 .encode_to_vec(MonoPcm(chunk), &mut output)
                 .map_err(|e| Error::Encode(format!("{:?}", e)))?;
         } else {
+            if chunk.len() % channels != 0 {
+                return Err(Error::Encode("Chunk de áudio estéreo incompleto".into()));
+            }
+
             encoder
                 .encode_to_vec(InterleavedPcm(chunk), &mut output)
                 .map_err(|e| Error::Encode(format!("{:?}", e)))?;
