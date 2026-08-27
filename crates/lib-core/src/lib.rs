@@ -174,3 +174,48 @@ pub fn pitch_shift<P: AsRef<Path> + std::fmt::Display>(
 
     println!("Concluído com sucesso!");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn estimate_frequency(samples: &[i16], sample_rate: f64) -> f64 {
+        let mut crossings = 0;
+
+        for i in 1..samples.len() {
+            if samples[i - 1] < 0 && samples[i] >= 0 {
+                crossings += 1;
+            }
+        }
+
+        crossings as f64 * sample_rate / samples.len() as f64
+    }
+
+    #[test]
+    fn converts_440hz_to_432hz() {
+        let sample_rate = 48_000.0;
+        let frequency = 440.0;
+        let duration = 1.0;
+
+        let samples_count = (sample_rate * duration) as usize;
+
+        let input: Vec<i16> = (0..samples_count)
+            .map(|i| {
+                let t = i as f64 / sample_rate;
+                let value = (2.0 * std::f64::consts::PI * frequency * t).sin();
+
+                (value * i16::MAX as f64) as i16
+            })
+            .collect();
+
+        let output = pitch(440.0, 432.0, &input, 1);
+
+        let measured = estimate_frequency(&output, sample_rate);
+
+        assert!(
+            (measured - 432.0).abs() < 1.0,
+            "esperado ~432 Hz, obtido {} Hz",
+            measured
+        );
+    }
+}
