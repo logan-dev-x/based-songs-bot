@@ -1,8 +1,20 @@
+use std::path::Path;
+
+use crate::{decode::decode, encode::encode, error::Error, pitch::pitch};
+
 pub mod audio;
 pub mod decode;
 pub mod encode;
 pub mod error;
 pub mod pitch;
+
+pub fn pitch_shift<P: AsRef<Path>>(input: P, output: P, from: f64, to: f64) -> Result<(), Error> {
+    let audio = decode(input)?;
+    let audio = pitch(&audio, from, to)?;
+    encode(&audio, output)?;
+
+    Ok(())
+}
 
 #[cfg(test)]
 mod test {

@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use lib_core::pitch_shift;
 use teloxide::{net::Download, prelude::*};
 use tokio::fs::File;
 
@@ -20,9 +21,22 @@ async fn main() {
                 .await
                 .map_err(|e| teloxide::RequestError::from(std::sync::Arc::new(e)))?;
             bot.download_file(&file.path, &mut output).await?;
+            println!("Download concluído!");
+            let output_path = PathBuf::from("/tmp").join(format!("converted-{}", file_name));
+            println!("Convertendo áudio...");
+
+            pitch_shift(&path, &output_path, 440.0, 432.0).map_err(|e| {
+                teloxide::RequestError::from(std::sync::Arc::new(std::io::Error::other(format!(
+                    "{:?}",
+                    e
+                ))))
+            })?;
+
+            println!("Conversão concluída!");
+
             bot.send_message(
                 msg.chat.id,
-                format!("Áudio baixado para: {}", path.display()),
+                format!("Conversão concluída!\nArquivo:\n{}", output_path.display()),
             )
             .await?;
         } else {
