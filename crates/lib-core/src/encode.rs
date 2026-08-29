@@ -18,7 +18,7 @@ fn create_encoder(channels: u8, sample_rate: u32) -> Result<Encoder, Error> {
         .map_err(|e| Error::Encode(format!("{:?}", e)))?;
 
     builder
-        .set_brate(Bitrate::Kbps256)
+        .set_brate(Bitrate::Kbps320)
         .map_err(|e| Error::Encode(format!("{:?}", e)))?;
 
     builder
