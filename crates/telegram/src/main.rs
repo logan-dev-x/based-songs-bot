@@ -1,10 +1,51 @@
 use std::env;
+use std::process::Stdio;
+use tokio::process::Command;
 
 use axum::{Router, routing::get};
 use lib_core::pitch_shift;
 use teloxide::{net::Download, prelude::*, types::InputFile};
 use tempfile::tempdir;
 use tokio::fs::File;
+
+async fn normalize_audio(
+    input_path: &std::path::Path,
+    output_path: &std::path::Path,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let output = Command::new("ffmpeg")
+        .args([
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-y",
+            "-i",
+        ])
+        .arg(input_path)
+        .args([
+            "-vn",
+            "-codec:a",
+            "libmp3lame",
+            "-q:a",
+            "2",
+        ])
+        .arg(output_path)
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .output()
+        .await?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+
+        return Err(format!(
+            "FFmpeg falhou: {}",
+            stderr.trim()
+        )
+        .into());
+    }
+
+    Ok(())
+}
 
 async fn report_error(
     bot: &Bot,
@@ -87,13 +128,53 @@ async fn run_bot() {
         bot.send_message(msg.chat.id, "🎵 Convertendo para 432 Hz...")
             .await?;
 
-        let output_path = temp_dir.path().join(format!("converted-{}", file_name));
 
-        if let Err(error) = pitch_shift(&input_path, &output_path, 440.0, 432.0) {
-            report_error(&bot, msg.chat.id, "conversão", error).await?;
+let normalized_path = temp_dir.path().join("normalized.mp3");
 
-            return respond(());
-        }
+if let Err(error) = normalize_audio(&input_path, &normalized_path).await {
+    report_error(
+        &bot,
+        msg.chat.id,
+        "normalização do áudio",
+        error,
+    )
+    .await?;
+
+    return respond(());
+}
+
+println!(
+    "Áudio normalizado: {}",
+    normalized_path.display()
+);
+
+bot.send_message(msg.chat.id, "🎵 Convertendo para 432 Hz...")
+    .await?;
+
+let output_path = temp_dir
+    .path()
+    .join(format!("converted-{}", file_name));
+
+if let Err(error) = pitch_shift(
+    &normalized_path,
+    &output_path,
+    440.0,
+    432.0,
+) {
+    report_error(
+        &bot,
+        msg.chat.id,
+        "conversão",
+        error,
+    )
+    .await?;
+
+    return respond(());
+}
+
+
+
+
 
         println!("Conversão concluída: {}", output_path.display());
 
