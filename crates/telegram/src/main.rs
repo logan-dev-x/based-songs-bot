@@ -1,3 +1,6 @@
+use std::env;
+
+use axum::{Router, routing::get};
 use lib_core::pitch_shift;
 use teloxide::{net::Download, prelude::*, types::InputFile};
 use tempfile::tempdir;
@@ -20,10 +23,12 @@ async fn report_error(
     Ok(())
 }
 
-#[tokio::main]
-async fn main() {
-    println!("Iniciando Based Songs Bot...");
+async fn health_check() -> &'static str {
+    "OK"
+}
 
+async fn run_bot() {
+    println!("Iniciando Based Songs Bot...");
     let bot = Bot::from_env();
 
     teloxide::repl(bot, |bot: Bot, msg: Message| async move {
@@ -115,4 +120,28 @@ async fn main() {
         respond(())
     })
     .await;
+}
+
+#[tokio::main]
+async fn main() {
+    println!("Iniciando Based Songs Bot...");
+
+    let port = env::var("PORT").expect("PORT não definida");
+    let addr = format!("0.0.0.0:{port}");
+
+    let app = Router::new().route("/", get(health_check));
+
+    let http_server = async {
+        let listener = tokio::net::TcpListener::bind(&addr)
+            .await
+            .expect("Falha ao iniciar servidor HTTP");
+
+        println!("Health check disponível em http://{addr}");
+
+        axum::serve(listener, app)
+            .await
+            .expect("Servidor HTTP encerrou com erro");
+    };
+
+    tokio::join!(run_bot(), http_server);
 }
