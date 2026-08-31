@@ -125,9 +125,6 @@ async fn run_bot() {
 
         println!("Download concluído: {}", input_path.display());
 
-        bot.send_message(msg.chat.id, "🎵 Convertendo para 432 Hz...")
-            .await?;
-
 
 let normalized_path = temp_dir.path().join("normalized.mp3");
 
